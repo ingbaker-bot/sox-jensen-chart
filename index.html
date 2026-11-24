@@ -1,1144 +1,1979 @@
 <!DOCTYPE html>
-<html lang="zh-Hant" class="light">
+<html lang="zh-Hant" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>費城半導體指數 (SOX) × 黃仁勳風波與復職大逆轉互動走勢圖</title>
-    <!-- 引入 Google Fonts: Inter 與 Noto Sans TC -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <!-- 引入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
-                    },
-                    colors: {
-                        twUp: '#dc2626',      // 台股習慣：上漲紅
-                        twDown: '#16a34a',    // 台股習慣：下跌綠
-                        brandBlue: '#1e3a8a',
-                        brandAccent: '#2563eb'
-                    }
-                }
-            }
-        }
-    </script>
+    <title>費半 (SOX) × 台股 (TAIEX) 走勢對照</title>
     <style>
-        /* 自訂滾動條與微調樣式 */
-        body {
-            font-family: 'Inter', 'Noto Sans TC', sans-serif;
-            transition: background-color 0.25s ease, color 0.25s ease;
+        /* =========================================================
+           1. CSS 變數與主題色票定義 (預設深色財經終端機風格)
+           ========================================================= */
+        :root {
+            --bg-body: #090d16;
+            --bg-card: #111827;
+            --bg-card-elevated: #1e293b;
+            --bg-hover: rgba(51, 65, 85, 0.45);
+            --border-color: #1f2937;
+            --border-strong: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            /* 亞洲與台股看盤習慣：紅漲綠跌 */
+            --tw-up: #ef4444;
+            --tw-up-bg: rgba(239, 68, 68, 0.14);
+            --tw-up-border: rgba(239, 68, 68, 0.35);
+            --tw-down: #10b981;
+            --tw-down-bg: rgba(16, 185, 129, 0.14);
+            --tw-down-border: rgba(16, 185, 129, 0.35);
+
+            /* 雙市場曲線專用色 */
+            --color-sox: #38bdf8;
+            --color-taiex: #f43f5e;
+            --color-ma240: #f59e0b;
+            --grid-line: rgba(148, 163, 184, 0.13);
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
+            --tooltip-bg: rgba(15, 23, 42, 0.96);
         }
+
+        html.light {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-card-elevated: #f8fafc;
+            --bg-hover: rgba(226, 232, 240, 0.65);
+            --border-color: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+
+            --tw-up: #ef4444;
+            --tw-up-bg: rgba(239, 68, 68, 0.09);
+            --tw-up-border: rgba(239, 68, 68, 0.28);
+            --tw-down: #10b981;
+            --tw-down-bg: rgba(16, 185, 129, 0.09);
+            --tw-down-border: rgba(16, 185, 129, 0.28);
+
+            --color-sox: #0284c7;
+            --color-taiex: #e11d48;
+            --color-ma240: #d97706;
+            --grid-line: rgba(100, 116, 139, 0.15);
+            --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.08);
+            --tooltip-bg: rgba(255, 255, 255, 0.97);
+        }
+
+        /* =========================================================
+           2. 基礎排版與重置
+           ========================================================= */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.55;
+            transition: background-color 0.25s ease, color 0.25s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .tabular-nums {
             font-variant-numeric: tabular-nums;
         }
-        /* 截圖模式隱藏控制列 */
+
+        .container {
+            max-width: 1340px;
+            margin: 0 auto;
+            padding: 20px 16px 48px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                padding: 26px 28px 60px;
+            }
+        }
+
         body.screenshot-mode .hide-in-screenshot {
             display: none !important;
         }
-        /* 自訂 Tooltip 動畫 */
-        #custom-tooltip {
-            transition: opacity 0.15s ease, transform 0.15s ease;
-            pointer-events: none;
-            z-index: 50;
+
+        /* =========================================================
+           3. 頂部標題列、市場主切換 Tabs 與工具按鈕
+           ========================================================= */
+        .header {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
         }
-        /* 表格列高亮過渡 */
+
+        @media (min-width: 1024px) {
+            .header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .badge-live {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            background: var(--tw-up-bg);
+            color: var(--tw-up);
+            border: 1px solid var(--tw-up-border);
+            margin-bottom: 8px;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--tw-up);
+            animation: pulse 1.6s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.3); }
+        }
+
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+        }
+
+        @media (min-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        .header-sub {
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            align-items: center;
+        }
+
+        .up-text { color: var(--tw-up); font-weight: 700; }
+        .down-text { color: var(--tw-down); font-weight: 700; }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+
+        .btn:hover {
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        /* 退出截圖模式浮動按鈕 */
+        #exit-screenshot-btn {
+            display: none;
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 999;
+            padding: 8px 16px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.92);
+            color: #fff;
+            border: 1px solid #475569;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        #exit-screenshot-btn:hover {
+            opacity: 1;
+        }
+
+        body.screenshot-mode #exit-screenshot-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 頂部顯眼雙市場切換器 (Segmented Control) */
+        .market-switcher-bar {
+            margin: 20px 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        @media (min-width: 900px) {
+            .market-switcher-bar {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .market-tabs {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            background: var(--bg-card);
+            padding: 6px;
+            border-radius: 14px;
+            border: 1px solid var(--border-strong);
+            box-shadow: var(--shadow-card);
+            width: 100%;
+        }
+
+        @media (min-width: 640px) {
+            .market-tabs {
+                grid-template-columns: repeat(3, 1fr);
+                width: auto;
+                min-width: 620px;
+            }
+        }
+
+        .market-tab-btn {
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 800;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .market-tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .market-tab-btn.active[data-market="sox"] {
+            background: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+        }
+
+        .market-tab-btn.active[data-market="taiex"] {
+            background: #e11d48;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+        }
+
+        .market-tab-btn.active[data-market="compare"] {
+            background: linear-gradient(135deg, #0284c7 0%, #e11d48 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+        }
+
+        /* 年線開關與輔助工具 */
+        .extra-toggles {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-primary);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        }
+
+        .toggle-pill.checked {
+            border-color: var(--color-ma240);
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--color-ma240);
+        }
+
+        /* =========================================================
+           4. 頂部 4 張核心指標摘要卡
+           ========================================================= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        @media (min-width: 640px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .kpi-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: var(--shadow-card);
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-strong);
+        }
+
+        .kpi-card.highlight-card {
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            border-color: #3730a3;
+            color: #f8fafc;
+        }
+
+        html.light .kpi-card.highlight-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            border-color: #1d4ed8;
+            color: #ffffff;
+        }
+
+        .kpi-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .highlight-card .kpi-label {
+            color: #bfdbfe;
+        }
+
+        .kpi-tag {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .tag-neutral { background: var(--bg-card-elevated); color: var(--text-secondary); }
+        .tag-down { background: var(--tw-down-bg); color: var(--tw-down); border: 1px solid var(--tw-down-border); }
+        .tag-up { background: var(--tw-up-bg); color: var(--tw-up); border: 1px solid var(--tw-up-border); }
+        .tag-gold { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+        .kpi-value {
+            margin-top: 10px;
+            font-size: 1.7rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+        }
+
+        .kpi-value small {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 3px;
+        }
+
+        .kpi-desc {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .highlight-card .kpi-desc {
+            color: #93c5fd;
+        }
+
+        /* =========================================================
+           5. 主圖表工作區
+           ========================================================= */
+        .workspace-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: var(--shadow-card);
+            margin-bottom: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .workspace-card {
+                padding: 24px;
+            }
+        }
+
+        .stage-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 16px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stage-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .stage-btn {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card-elevated);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .stage-btn:hover {
+            border-color: var(--border-strong);
+            color: var(--text-primary);
+        }
+
+        .stage-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .chart-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 1024px) {
+            .chart-layout {
+                grid-template-columns: 1.75fr 1fr;
+                align-items: stretch;
+            }
+        }
+
+        .chart-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .legend-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 16px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+        }
+
+        .swatch-line {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .swatch-dash {
+            width: 16px;
+            height: 0;
+            border-top: 2px dashed;
+        }
+
+        .svg-wrapper {
+            position: relative;
+            width: 100%;
+            background: var(--bg-card-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        svg#main-svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            user-select: none;
+        }
+
+        /* 懸浮 Tooltip */
+        #svg-tooltip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 280px;
+            background: var(--tooltip-bg);
+            border: 1px solid var(--border-strong);
+            border-radius: 12px;
+            padding: 12px 14px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.14s ease;
+            z-index: 30;
+            backdrop-filter: blur(8px);
+        }
+
+        #svg-tooltip.visible {
+            opacity: 1;
+        }
+
+        /* =========================================================
+           6. 右側焦點事件詳情卡片
+           ========================================================= */
+        .detail-panel {
+            background: var(--bg-card-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-kicker {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            color: #38bdf8;
+            text-transform: uppercase;
+        }
+
+        html.light .detail-kicker {
+            color: #0284c7;
+        }
+
+        .nav-arrows {
+            display: flex;
+            gap: 6px;
+        }
+
+        .nav-arrow-btn {
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-strong);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .nav-arrow-btn:hover {
+            border-color: #38bdf8;
+            color: #38bdf8;
+        }
+
+        .detail-date-row {
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .detail-date {
+            font-size: 1.35rem;
+            font-weight: 900;
+        }
+
+        .detail-badge {
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            background: rgba(245, 158, 11, 0.16);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        html.light .detail-badge {
+            color: #b45309;
+        }
+
+        .market-boxes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .m-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 11px 12px;
+        }
+
+        .m-box-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .m-box-val {
+            margin-top: 4px;
+            font-size: 1.15rem;
+            font-weight: 900;
+        }
+
+        .m-box-sub {
+            margin-top: 2px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .detail-story {
+            margin-top: 16px;
+        }
+
+        .detail-story-title {
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 1.4;
+            color: var(--text-primary);
+        }
+
+        .detail-story-desc {
+            margin-top: 8px;
+            font-size: 13.5px;
+            line-height: 1.65;
+            color: var(--text-secondary);
+        }
+
+        .quick-pills-wrap {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .quick-pills-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .quick-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .pill-btn {
+            padding: 4px 9px;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .pill-btn:hover {
+            border-color: var(--border-strong);
+            color: var(--text-primary);
+        }
+
+        .pill-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        /* =========================================================
+           7. 底部完整明細對照表
+           ========================================================= */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .table-header h2 {
+            font-size: 1.05rem;
+            font-weight: 900;
+        }
+
+        .table-header p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 12px 14px;
+            font-size: 11.5px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            background: var(--bg-card-elevated);
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 14px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
         tr.data-row {
-            transition: background-color 0.15s ease;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        tr.data-row:hover {
+            background: var(--bg-hover);
+        }
+
+        tr.data-row.selected-row {
+            background: rgba(37, 99, 235, 0.16);
+            box-shadow: inset 3px 0 0 #3b82f6;
+        }
+
+        html.light tr.data-row.selected-row {
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .text-right { text-align: right; }
+        .nowrap { white-space: nowrap; }
+
+        .event-chip {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            margin-bottom: 3px;
+        }
+
+        html.light .event-chip {
+            color: #b45309;
+        }
+
+        .footer-note {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .data-note, .chart-note {
+            margin: 0 0 14px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .data-note {
+            padding: 10px 14px;
+            border-inline-start: 3px solid var(--color-ma240);
+            background: var(--bg-card);
+        }
+
+        .chart-note {
+            margin: 10px 0 0;
+        }
+
+        .chart-box {
+            min-width: 0;
+        }
+
+        .chart-date-label {
+            margin: 12px 0 4px;
+            font-size: 13px;
+        }
+
+        #chart-date {
+            min-height: 44px;
+            padding: 6px 10px;
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            font: inherit;
+            align-self: flex-start;
+            max-width: 100%;
+        }
+
+        .kpi-card {
+            text-align: start;
+            color: var(--text-primary);
+            font: inherit;
+        }
+
+        .kpi-value {
+            display: block;
+        }
+
+        .data-row th {
+            background: transparent;
+        }
+
+        .date-link {
+            font: inherit;
+            color: var(--text-primary);
+            background: transparent;
+            border: 0;
+            min-height: 34px;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .data-row {
+            cursor: auto;
+        }
+
+        button:focus-visible, select:focus-visible {
+            outline: 2px solid var(--color-sox);
+            outline-offset: 3px;
+        }
+
+        body.screenshot-mode .chart-date-label,
+        body.screenshot-mode #chart-date {
+            display: none;
+        }
+
+        #svg-tooltip > div + div {
+            margin-top: 6px;
+        }
+
+        @media (max-width: 539px) {
+            th, td {
+                padding-inline: 8px;
+            }
+
+            .date-link {
+                min-height: 44px;
+            }
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased selection:bg-blue-600 selection:text-white">
+<body>
 
-    <!-- 截圖模式浮動恢復按鈕 (僅在截圖模式顯示，滑鼠移入右上角顯現) -->
-    <div id="exit-screenshot-bar" class="hidden fixed top-3 right-3 z-50 opacity-30 hover:opacity-100 transition-opacity">
-        <button onclick="toggleScreenshotMode()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-900/90 text-white text-xs font-semibold shadow-lg backdrop-blur border border-slate-700 cursor-pointer">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            退出截圖模式
-        </button>
-    </div>
+    <!-- 退出截圖模式按鈕 -->
+    <button id="exit-screenshot-btn" onclick="toggleScreenshotMode()">
+        👁️ 退出截圖模式
+    </button>
 
-    <!-- 主容器 -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-
-        <!-- 1. 頂部標題與控制列 -->
-        <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+    <div class="container">
+        <!-- 1. 頂部標題與工具列 -->
+        <header class="header">
             <div>
-                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold tracking-wide mb-2">
-                    <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                    SOX INDEX × NVIDIA CEO CRISIS & COMEBACK
+                <div class="badge-live">
+                    SOX × TAIEX DUAL-MARKET TRACKER (2026/10/28 ～ 11/24)
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                    費城半導體指數 (SOX) × 黃仁勳風波與復職大逆轉互動走勢圖
-                </h1>
-                <p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>統計區間：2026/10/28 至 2026/11/24（台灣時間上午，對應美股 11/23 最新收盤）</span>
-                    <span class="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
-                    <span class="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
-                        漲跌標示：<span class="text-red-600 dark:text-red-400 font-bold">紅漲</span> / <span class="text-emerald-600 dark:text-emerald-400 font-bold">綠跌</span>（台股視覺習慣）
-                    </span>
-                </p>
+                <h1>費半與台股走勢對照</h1>
+                <div class="header-sub">
+                    <span>一鍵切換美國費半 (SOX)、台灣加權指數 (TAIEX) 與雙線連動對照</span>
+                    <span>|</span>
+                    <span>亞洲看盤慣例：<span class="up-text">紅漲</span> / <span class="down-text">綠跌</span></span>
+                </div>
             </div>
 
-            <!-- 右上角工具按鈕區 -->
-            <div class="flex flex-wrap items-center gap-2.5 hide-in-screenshot">
-                <!-- 深淺色切換 -->
-                <button id="theme-toggle-btn" onclick="toggleTheme()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
-                    <svg id="icon-moon" class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-                    <svg id="icon-sun" class="w-4 h-4 text-amber-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                    <span id="theme-label">深色模式</span>
+            <div class="toolbar hide-in-screenshot">
+                <button class="btn" id="theme-btn" onclick="toggleTheme()">
+                    <span id="theme-icon">☀️</span>
+                    <span id="theme-text">切換淺色模式</span>
                 </button>
-
-                <!-- 截圖展示模式 -->
-                <button onclick="toggleScreenshotMode()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/20 transition cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    截圖展示模式
+                <button class="btn btn-primary" onclick="toggleScreenshotMode()">
+                    📸 截圖展示模式
                 </button>
             </div>
         </header>
 
-        <!-- 2. 頂部 4 張核心關鍵指標卡 (KPI Cards) -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
-            <!-- KPI 1 -->
-            <div onclick="selectIndexByDate('10/28 (三)')" class="group cursor-pointer rounded-2xl bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-400 dark:hover:border-blue-600 transition">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">事件前高點 (10/28)</span>
-                    <span class="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">基準水位</span>
-                </div>
-                <div class="mt-2.5 flex items-baseline gap-2">
-                    <span class="text-2xl sm:text-3xl font-black tabular-nums text-slate-900 dark:text-white">11,684.00</span>
-                    <span class="text-xs font-semibold text-slate-500">點</span>
-                </div>
-                <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                    <span>當日收漲 <strong class="text-red-600 dark:text-red-400">+1.75%</strong></span>
-                    <span class="text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition text-[11px] font-semibold">點擊定位 →</span>
-                </p>
+        <p class="data-note">
+            <strong>資料待核實。</strong> 行情與事件索引取自原稿，原稿未附來源。11/24 台股為盤中觀測，時間未提供。
+        </p>
+
+        <!-- 2. 頂部雙市場主切換分頁列 -->
+        <nav class="market-switcher-bar hide-in-screenshot">
+            <div class="market-tabs" role="group" aria-label="選擇市場">
+                <button class="market-tab-btn active" data-market="sox" onclick="switchMarket('sox')">
+                    🇺🇸 費城半導體指數 (SOX)
+                </button>
+                <button class="market-tab-btn" data-market="taiex" onclick="switchMarket('taiex')">
+                    🇹🇼 台灣加權指數 (TAIEX)
+                </button>
+                <button class="market-tab-btn" data-market="compare" onclick="switchMarket('compare')">
+                    🔗 美台雙線連動對照
+                </button>
             </div>
 
-            <!-- KPI 2 -->
-            <div onclick="selectIndexByDate('11/20 (五)')" class="group cursor-pointer rounded-2xl bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500 transition">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">波段最低谷 (11/20)</span>
-                    <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">最大跌幅 -28.03%</span>
-                </div>
-                <div class="mt-2.5 flex items-baseline gap-2">
-                    <span class="text-2xl sm:text-3xl font-black tabular-nums text-emerald-600 dark:text-emerald-400">8,408.59</span>
-                    <span class="text-xs font-semibold text-slate-500">點</span>
-                </div>
-                <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                    <span>群龍無首單日重挫 <strong class="text-emerald-600 dark:text-emerald-400">-10.73%</strong></span>
-                    <span class="text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition text-[11px] font-semibold">點擊定位 →</span>
-                </p>
+            <!-- 台股專屬輔助開關（年線 MA240） -->
+            <div class="extra-toggles" id="extra-toggles-box" style="display: none;">
+                <button class="toggle-pill checked" aria-pressed="true" id="ma240-toggle-btn" onclick="toggleMa240()">
+                    <span>📐</span>
+                    <span>顯示年線參考值（39,322 點）：<strong id="ma240-status">開啟</strong></span>
+                </button>
             </div>
+        </nav>
 
-            <!-- KPI 3 -->
-            <div onclick="selectIndexByDate('11/23 (一)')" class="group cursor-pointer rounded-2xl bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-red-500 transition">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">最新收盤 (11/23)</span>
-                    <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-red-50 dark:bg-red-950/70 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">單日狂飆 +14.03%</span>
-                </div>
-                <div class="mt-2.5 flex items-baseline gap-2">
-                    <span class="text-2xl sm:text-3xl font-black tabular-nums text-red-600 dark:text-red-400">9,588.05</span>
-                    <span class="text-xs font-semibold text-slate-500">點</span>
-                </div>
-                <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                    <span>較 11/20 谷底反彈 <strong class="text-red-600 dark:text-red-400">+1,179.46 點</strong></span>
-                    <span class="text-red-600 dark:text-red-400 opacity-0 group-hover:opacity-100 transition text-[11px] font-semibold">點擊定位 →</span>
-                </p>
-            </div>
+        <!-- 3. 頂部 4 張動態核心指標摘要卡（隨所選分頁即時切換） -->
+        <section class="kpi-grid" id="kpi-grid"></section>
 
-            <!-- KPI 4 -->
-            <div onclick="selectIndexByDate('11/12 (四)')" class="group cursor-pointer rounded-2xl bg-gradient-to-br from-blue-900 to-slate-900 dark:from-blue-950 dark:to-slate-900 p-5 border border-blue-800 text-white shadow-sm hover:border-blue-400 transition">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-blue-200">事件關鍵轉折</span>
-                    <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">戲劇性逆轉</span>
-                </div>
-                <div class="mt-2.5 text-xl sm:text-2xl font-black tracking-tight text-white">
-                    請辭 11 天後全票復職
-                </div>
-                <p class="mt-1.5 text-xs text-blue-200 flex items-center justify-between">
-                    <span>國安風暴 ➔ 辭職 ➔ 川普介入逆轉</span>
-                </p>
-            </div>
-        </section>
-
-        <!-- 3. 互動控制列：階段篩選器 & 重大事件導覽 -->
-        <section id="chart-workspace" class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6 mb-6">
-            
-            <!-- 篩選與導覽工具列 -->
-            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 dark:border-slate-800 hide-in-screenshot">
-                <!-- 階段篩選按鈕群 -->
-                <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-xs font-bold text-slate-400 mr-1">階段聚焦：</span>
-                    <button onclick="setStageFilter('all')" data-stage="all" class="stage-btn active px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition cursor-pointer">
-                        全部期間 (19日)
+        <!-- 4. 互動圖表工作區 -->
+        <section class="workspace-card" id="chart-section">
+            <!-- 階段篩選按鈕群 -->
+            <div class="stage-bar hide-in-screenshot">
+                <div class="stage-filters" role="group" aria-label="選擇日期區間">
+                    <button class="stage-btn active" data-stage="all" onclick="setStageFilter('all')">
+                        全部波段
                     </button>
-                    <button onclick="setStageFilter('stage1')" data-stage="stage1" class="stage-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
-                        ① 媒體首爆與國會施壓
+                    <button class="stage-btn" data-stage="s1" onclick="setStageFilter('s1')">
+                        10/28–11/06
                     </button>
-                    <button onclick="setStageFilter('stage2')" data-stage="stage2" class="stage-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
-                        ② 認錯與震撼請辭
+                    <button class="stage-btn" data-stage="s2" onclick="setStageFilter('s2')">
+                        11/09–11/13
                     </button>
-                    <button onclick="setStageFilter('stage3')" data-stage="stage3" class="stage-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
-                        ③ 無主谷底與復職逆轉
+                    <button class="stage-btn" data-stage="s3" onclick="setStageFilter('s3')">
+                        11/16–11/24
                     </button>
                 </div>
-
-                <!-- 重大事件上下跳轉按鈕 -->
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 hidden sm:inline">重大節點導覽：</span>
-                    <button onclick="navigateMilestone(-1)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 border border-slate-200 dark:border-slate-700 transition cursor-pointer">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
-                        上一個重大事件
-                    </button>
-                    <button onclick="navigateMilestone(1)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 border border-slate-200 dark:border-slate-700 transition cursor-pointer">
-                        下一個重大事件
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </button>
+                <div style="font-size: 12px; color: var(--text-secondary);" id="market-hint-text">
+                    🇺🇸 美國費半收盤時間：美東時間 10/28 至 11/23（共 19 個交易日）
                 </div>
             </div>
 
-            <!-- 圖表主體 + 右側焦點日期詳情面板 -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                
-                <!-- 左側：Chart.js 折線面積圖 (佔 8 欄) -->
-                <div class="lg:col-span-8 flex flex-col">
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                        <div class="flex items-center gap-4 text-xs">
-                            <span class="inline-flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                                <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
-                                費半指數 (SOX) 收盤線
-                            </span>
-                            <span class="inline-flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                                <span class="w-3 h-3 rounded-full bg-amber-500 ring-2 ring-amber-200 dark:ring-amber-900 inline-block"></span>
-                                重大新聞轉折點 (點擊鎖定)
-                            </span>
-                        </div>
-                        <span class="text-[11px] text-slate-400">提示：滑鼠移至或點擊曲線上任一日期可鎖定右側詳情</span>
+            <!-- 主視覺雙欄：左側 SVG 圖表 + 右側焦點詳情卡 -->
+            <div class="chart-layout">
+                <!-- 左側圖表區 -->
+                <div class="chart-box">
+                    <div class="legend-row">
+                        <div class="legend-items" id="chart-legend"></div>
+                        <span style="font-size: 11px;">點選日期或圖表節點查看明細</span>
                     </div>
 
-                    <!-- Canvas 容器 (響應式高度，無固定寬高屬性) -->
-                    <div class="relative w-full h-[340px] sm:h-[400px] lg:h-[430px] select-none">
-                        <canvas id="soxChart"></canvas>
-                        <!-- 自訂懸浮 Tooltip -->
-                        <div id="custom-tooltip" class="hidden absolute top-0 left-0 w-72 sm:w-80 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl p-3.5 text-left">
-                            <div class="flex items-center justify-between gap-2 mb-1">
-                                <span id="tt-date" class="text-xs font-black text-slate-900 dark:text-white"></span>
-                                <span id="tt-stage" class="px-2 py-0.5 rounded text-[10px] font-bold"></span>
-                            </div>
-                            <div class="flex items-baseline gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                                <span id="tt-close" class="text-lg font-black tabular-nums text-slate-900 dark:text-white"></span>
-                                <span id="tt-change" class="text-xs font-extrabold tabular-nums"></span>
-                            </div>
-                            <div id="tt-title" class="text-xs font-bold text-blue-700 dark:text-blue-400 mb-1"></div>
-                            <p id="tt-summary" class="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 line-clamp-4"></p>
-                        </div>
+                    <div class="svg-wrapper" id="svg-container">
+                        <svg id="main-svg" viewBox="0 0 860 440" role="img" aria-label="市場走勢圖，明細可從下方日期選擇"></svg>
+                        <div id="svg-tooltip" aria-hidden="true"></div>
                     </div>
+                    <label class="chart-date-label" for="chart-date">查看日期</label>
+                    <select id="chart-date"></select>
+                    <p class="chart-note" id="chart-note"></p>
                 </div>
 
-                <!-- 右側：焦點日期事件詳情面板 (佔 4 欄) -->
-                <div class="lg:col-span-4 flex flex-col justify-between rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 p-5">
+                <!-- 右側焦點事件詳情卡 -->
+                <aside class="detail-panel">
                     <div>
-                        <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-700">
-                            <span class="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                焦點日期事件詳情
-                            </span>
-                            <span id="detail-milestone-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                                ★ 重大轉折
-                            </span>
-                        </div>
-
-                        <!-- 日期與階段 -->
-                        <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
-                            <h2 id="detail-date" class="text-xl font-black text-slate-900 dark:text-white tabular-nums">2026/11/23 (一)</h2>
-                            <span id="detail-stage" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">復職大逆轉</span>
-                        </div>
-
-                        <!-- 收盤指數與單日漲跌方塊 -->
-                        <div class="mt-3 grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700">
-                            <div>
-                                <div class="text-[11px] font-semibold text-slate-400">SOX 收盤指數</div>
-                                <div id="detail-close" class="mt-0.5 text-xl font-black tabular-nums text-slate-900 dark:text-white">9,588.05</div>
-                            </div>
-                            <div>
-                                <div class="text-[11px] font-semibold text-slate-400">單日漲跌幅</div>
-                                <div id="detail-change" class="mt-0.5 text-xl font-black tabular-nums text-red-600 dark:text-red-400">+14.03%</div>
+                        <div class="detail-header">
+                            <span class="detail-kicker" id="d-kicker">📌 🇺🇸 費半焦點交易日解析</span>
+                            <div class="nav-arrows hide-in-screenshot">
+                                <button class="nav-arrow-btn" onclick="stepMilestone(-1)">◀ 上一重點</button>
+                                <button class="nav-arrow-btn" onclick="stepMilestone(1)">下一重點 ▶</button>
                             </div>
                         </div>
 
-                        <!-- 事件標題與完整摘要 -->
-                        <div class="mt-4">
-                            <h3 id="detail-title" class="text-base font-extrabold text-slate-900 dark:text-white leading-snug">
-                                【戲劇性大逆轉】黃仁勳復職 CEO！費半狂飆 14%
-                            </h3>
-                            <p id="detail-summary" class="mt-2.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                                11/22 川普親自介入溝通後，輝達董事會態度 180 度大逆轉，於 11/23 全票通過黃仁勳即刻復職 CEO 並增設「首席合規長」；白宮喊話「必須保護天才」，激勵費半單日暴漲 +14.03% 收 9,588.05 點！
-                            </p>
+                        <div class="detail-date-row" aria-live="polite">
+                            <div class="detail-date tabular-nums" id="d-date">2026/11/23 (一)</div>
+                            <span class="detail-badge" id="d-tag">最後一筆收盤</span>
+                        </div>
+
+                        <!-- 雙數據方塊 -->
+                        <div class="market-boxes" id="detail-boxes"></div>
+
+                        <!-- 事件敘述 -->
+                        <div class="detail-story">
+                            <p class="detail-story-desc" id="d-desc"></p>
+                            <details id="event-note" hidden>
+                                <summary>原稿事件索引（待核實）</summary>
+                                <p class="detail-story-desc" id="event-text"></p>
+                            </details>
                         </div>
                     </div>
 
-                    <!-- 底部快速切換重大事件膠囊標籤 -->
-                    <div class="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700 hide-in-screenshot">
-                        <div class="text-[11px] font-bold text-slate-400 mb-2">快速點選 8 大關鍵轉折日：</div>
-                        <div id="milestone-pills" class="flex flex-wrap gap-1.5">
-                            <!-- 由 JS 動態生成 -->
-                        </div>
+                    <!-- 快速點選重大轉折日膠囊 -->
+                    <div class="quick-pills-wrap hide-in-screenshot">
+                        <div class="quick-pills-label" id="quick-pills-title">重點日期</div>
+                        <div class="quick-pills" id="quick-pills"></div>
                     </div>
-                </div>
-
+                </aside>
             </div>
         </section>
 
-        <!-- 4. 下方連動明細對照表 -->
-        <section class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <!-- 5. 底部完整明細對照表（隨分頁自動切換顯示該市場明細） -->
+        <section class="table-card">
+            <div class="table-header">
                 <div>
-                    <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                        每日收盤數據與黃仁勳事件完整對照表（19 個交易日）
-                    </h2>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        點擊任一交易日列，即可自動捲動至上方圖表並鎖定顯示該日節點詳情
-                    </p>
-                </div>
-                <div class="flex items-center gap-2 text-xs">
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
-                        ★ 標記為重大新聞轉折日
-                    </span>
+                    <h2 id="table-title">費半每日收盤</h2>
+                    <p>選擇任一日期，同步定位到上方走勢圖</p>
                 </div>
             </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                            <th class="py-3.5 px-4 whitespace-nowrap">美東日期</th>
-                            <th class="py-3.5 px-4 whitespace-nowrap text-right">SOX 收盤</th>
-                            <th class="py-3.5 px-4 whitespace-nowrap text-right">單日漲跌</th>
-                            <th class="py-3.5 px-4 whitespace-nowrap">所屬階段</th>
-                            <th class="py-3.5 px-4 min-w-[280px]">關鍵新聞事件與市場影響</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
-                        <!-- 由 JS 動態生成 19 筆資料 -->
-                    </tbody>
+            <div class="table-scroll">
+                <table>
+                    <thead id="table-head"></thead>
+                    <tbody id="table-body"></tbody>
                 </table>
             </div>
         </section>
 
-        <!-- 頁尾註記 -->
-        <footer class="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-            資料整理基準：2026年10月28日 至 2026年11月24日（美股最新收盤為 11/23）｜僅供資訊視覺化與事件脈絡研究參考
+        <footer class="footer-note">
+            觀測區間：2026/10/28–11/24。費半日期為美東時間，台股日期為台灣時間。
         </footer>
-
     </div>
 
     <script>
-        // ==========================================
-        // 1. 完整 19 個交易日精確數據集
-        // ==========================================
-        const soxEventsData = [
-            {
-                date: "10/28 (三)",
-                close: 11684.00,
-                change: "+1.75%",
-                changeVal: 1.75,
-                stage: "風波前基準",
-                stageGroup: "all",
-                isMilestone: false,
-                title: "事件前高檔基準",
-                summary: "風波爆發前夕，費城半導體指數處於高檔水位（Yahoo Finance 盤中游標約 11,599.50 點，終場收 11,684.00 點）。"
-            },
-            {
-                date: "10/29 (四)",
-                close: 11518.20,
-                change: "-1.42%",
-                changeVal: -1.42,
-                stage: "媒體首爆期",
-                stageGroup: "stage1",
-                isMilestone: true,
-                shortLabel: "10/29 紐時首爆",
-                title: "【媒體首爆】紐時揭露黃樂涉間諜案",
-                summary: "《紐約時報》率先揭露前新加坡 Megaspeed 高管黃樂（Alice Huang）涉北京情報活動且與黃仁勳互動密切；輝達官方與黃仁勳雙雙否認不當關係。"
-            },
-            {
-                date: "10/30 (五)",
-                close: 10688.80,
-                change: "-7.20%",
-                changeVal: -7.20,
-                stage: "媒體首爆期",
-                stageGroup: "stage1",
-                isMilestone: false,
-                title: "晶片轉運管制疑慮升溫，費半重挫逾 7%",
-                summary: "市場擔憂東南亞資料中心 AI 晶片轉運遭美國擴大出口管制，半導體族群湧現獲利了結與避險賣壓。"
-            },
-            {
-                date: "11/02 (一)",
-                close: 10328.33,
-                change: "-3.37%",
-                changeVal: -3.37,
-                stage: "媒體首爆期",
-                stageGroup: "stage1",
-                isMilestone: false,
-                title: "媒體追查在台互動軌跡，指數回測萬點",
-                summary: "美台媒體持續追查兩人在台北 Computex 等場合的互動畫面，費半指數延續修正格局。"
-            },
-            {
-                date: "11/03 (二)",
-                close: 10600.40,
-                change: "+2.63%",
-                changeVal: 2.63,
-                stage: "國安與國會風暴",
-                stageGroup: "stage1",
-                isMilestone: false,
-                title: "美國期中選舉日，短線技術反彈",
-                summary: "美國期中選舉投票日，半導體類股跌深後出現短線買盤支撐。"
-            },
-            {
-                date: "11/04 (三)",
-                close: 10268.65,
-                change: "-3.13%",
-                changeVal: -3.13,
-                stage: "國安與國會風暴",
-                stageGroup: "stage1",
-                isMilestone: true,
-                shortLabel: "11/04 國會傳喚",
-                title: "【國會施壓】眾議院三委員會聯名發函傳喚",
-                summary: "期中選舉民主黨奪回參眾兩院；眾議院三大委員會聯名發函要求黃仁勳出席閉門簡報，事件正式升級為華府國安風暴。"
-            },
-            {
-                date: "11/05 (四)",
-                close: 9011.14,
-                change: "-12.25%",
-                changeVal: -12.25,
-                stage: "國安與國會風暴",
-                stageGroup: "stage1",
-                isMilestone: true,
-                shortLabel: "11/05 暴跌12.25%",
-                title: "【國安恐慌重挫】單日暴跌 12.25% 失守萬點",
-                summary: "出口管制收緊與國會調查疑慮全面引爆機構法人拋售潮，費半指數單日重挫 12.25%，創波段最大單日跌幅。"
-            },
-            {
-                date: "11/06 (五)",
-                close: 9390.25,
-                change: "+4.21%",
-                changeVal: 4.21,
-                stage: "國安與國會風暴",
-                stageGroup: "stage1",
-                isMilestone: false,
-                title: "重挫後技術性反彈",
-                summary: "連續急跌後吸引短線抄底買盤進場，指數反彈逾 4%。"
-            },
-            {
-                date: "11/09 (一)",
-                close: 10033.93,
-                change: "+6.85%",
-                changeVal: 6.85,
-                stage: "認錯與震撼請辭",
-                stageGroup: "stage2",
-                isMilestone: true,
-                shortLabel: "11/09 認錯反彈",
-                title: "【正式認錯】內部信承認婚外情，利空鈍化大漲",
-                summary: "11/8 週日黃仁勳發內部信正式承認婚外情並致歉，董事會啟動獨立調查；11/9 開盤市場認為不確定性暫除，費半強彈 6.85% 重返萬點。"
-            },
-            {
-                date: "11/10 (二)",
-                close: 9998.33,
-                change: "-0.35%",
-                changeVal: -0.35,
-                stage: "認錯與震撼請辭",
-                stageGroup: "stage2",
-                isMilestone: false,
-                title: "媒體續爆細節，萬點關卡得而復失",
-                summary: "台美媒體持續披露牽線內幕與細節，指數在萬點關卡附近狹幅震盪。"
-            },
-            {
-                date: "11/11 (三)",
-                close: 10564.11,
-                change: "+5.66%",
-                changeVal: 5.66,
-                stage: "認錯與震撼請辭",
-                stageGroup: "stage2",
-                isMilestone: false,
-                title: "董事會秘密召開緊急會議",
-                summary: "市場尚未獲知請辭消息前指數一度反彈；輝達董事會於當日召開緊急會議決定接受黃仁勳請辭。"
-            },
-            {
-                date: "11/12 (四)",
-                close: 10506.67,
-                change: "-0.54%",
-                changeVal: -0.54,
-                stage: "認錯與震撼請辭",
-                stageGroup: "stage2",
-                isMilestone: true,
-                shortLabel: "11/12 震撼請辭",
-                title: "【震撼請辭】黃仁勳即刻辭去 CEO 與董事職務",
-                summary: "輝達震撼宣布黃仁勳即刻辭去執行長、總裁與董事職務，由財務長 Colette Kress 暫代；同日路透社再爆第三段婚外情。"
-            },
-            {
-                date: "11/13 (五)",
-                close: 10146.32,
-                change: "-3.43%",
-                changeVal: -3.43,
-                stage: "無主震盪與谷底",
-                stageGroup: "stage3",
-                isMilestone: false,
-                title: "參議院要求作證、美財長點名黑名單",
-                summary: "參議院要求作證且美國財長點名擬將 Megaspeed 列入貿易黑名單，失去靈魂人物的輝達與半導體股承壓走低。"
-            },
-            {
-                date: "11/16 (一)",
-                close: 9610.65,
-                change: "-5.28%",
-                changeVal: -5.28,
-                stage: "無主震盪與谷底",
-                stageGroup: "stage3",
-                isMilestone: false,
-                title: "16萬人連署求回歸，市場仍憂無主風險",
-                summary: "馬斯克與逾 16 萬人連署呼籲黃仁勳回歸，川普首表態不介意其回任，但董事會尚未鬆口，費半續跌逾 5%。"
-            },
-            {
-                date: "11/17 (二)",
-                close: 9642.88,
-                change: "+0.34%",
-                changeVal: 0.34,
-                stage: "無主震盪與谷底",
-                stageGroup: "stage3",
-                isMilestone: true,
-                shortLabel: "11/17 財報拒回鍋",
-                title: "【財報日拒回鍋】董事長公開回絕復職請求",
-                summary: "黃仁勳公開發聲願回任，但董事長 Harvey Jones 於財報會議公開回絕，並宣布成立「國安與出口管制監督委員會」。"
-            },
-            {
-                date: "11/18 (三)",
-                close: 9652.80,
-                change: "+0.10%",
-                changeVal: 0.10,
-                stage: "無主震盪與谷底",
-                stageGroup: "stage3",
-                isMilestone: false,
-                title: "市場消化財報與接班不確定性",
-                summary: "投資人評估後黃仁勳時代的營運風險，指數橫盤整理。"
-            },
-            {
-                date: "11/19 (四)",
-                close: 9419.72,
-                change: "-2.41%",
-                changeVal: -2.41,
-                stage: "無主震盪與谷底",
-                stageGroup: "stage3",
-                isMilestone: false,
-                title: "加州政府啟動晶片流向調查",
-                summary: "加州政府宣布對輝達晶片流向展開調查，監管壓力一波未平一波又起。"
-            },
-            {
-                date: "11/20 (五)",
-                close: 8408.59,
-                change: "-10.73%",
-                changeVal: -10.73,
-                stage: "無主震盪與谷底",
-                stageGroup: "stage3",
-                isMilestone: true,
-                shortLabel: "11/20 谷底8408",
-                title: "【波段最低谷】群龍無首重挫 10.73% 探底",
-                summary: "缺乏核心領袖加上多重國安與州政府調查壓力，費半單日暴跌 10.73% 收在 8,408.59 點（較 10/28 高點累計重挫 28.03%）。"
-            },
-            {
-                date: "11/23 (一)",
-                close: 9588.05,
-                change: "+14.03%",
-                changeVal: 14.03,
-                stage: "復職大逆轉",
-                stageGroup: "stage3",
-                isMilestone: true,
-                shortLabel: "11/23 復職+14.03%",
-                title: "【戲劇性大逆轉】黃仁勳復職 CEO！費半狂飆 14%",
-                summary: "11/22 川普親自介入溝通後，輝達董事會態度 180 度大逆轉，於 11/23 全票通過黃仁勳即刻復職 CEO 並增設「首席合規長」；白宮喊話「必須保護天才」，激勵費半單日暴漲 +14.03% 收 9,588.05 點！"
-            }
+        // =========================================================
+        // 1. 附件行情點位
+        // =========================================================
+
+        // 一、🇺🇸 費城半導體指數 (SOX) 數據（10/28 ～ 11/23 收盤，19 個交易日）
+        const soxData = [
+            { isoDate: "2026-10-28", value: 11684.00, stage: "s1", tag: "基準收盤" },
+            { isoDate: "2026-10-29", value: 11518.20, stage: "s1", tag: "10 月 29 日收盤" },
+            { isoDate: "2026-10-30", value: 10688.80, stage: "s1" },
+            { isoDate: "2026-11-02", value: 10328.33, stage: "s1" },
+            { isoDate: "2026-11-03", value: 10600.40, stage: "s1" },
+            { isoDate: "2026-11-04", value: 10268.65, stage: "s1" },
+            { isoDate: "2026-11-05", value: 9011.14, stage: "s1", tag: "區間最大單日跌幅" },
+            { isoDate: "2026-11-06", value: 9390.25, stage: "s1" },
+            { isoDate: "2026-11-09", value: 10033.93, stage: "s2", tag: "指數回到一萬點" },
+            { isoDate: "2026-11-10", value: 9998.33, stage: "s2" },
+            { isoDate: "2026-11-11", value: 10564.11, stage: "s2" },
+            { isoDate: "2026-11-12", value: 10506.67, stage: "s2", tag: "11 月 12 日收盤" },
+            { isoDate: "2026-11-13", value: 10146.32, stage: "s2" },
+            { isoDate: "2026-11-16", value: 9610.65, stage: "s3" },
+            { isoDate: "2026-11-17", value: 9642.88, stage: "s3", tag: "11 月 17 日收盤" },
+            { isoDate: "2026-11-18", value: 9652.80, stage: "s3" },
+            { isoDate: "2026-11-19", value: 9419.72, stage: "s3" },
+            { isoDate: "2026-11-20", value: 8408.59, stage: "s3", tag: "區間最低收盤" },
+            { isoDate: "2026-11-23", value: 9588.05, stage: "s3", tag: "最後一筆收盤" }
         ];
 
-        // ==========================================
-        // 2. 全域狀態變數
-        // ==========================================
-        let selectedIndex = soxEventsData.length - 1; // 預設選取最新 11/23 (一)
-        let currentStageFilter = 'all';
-        let soxChartInstance = null;
+        // 二、🇹🇼 台灣加權指數 (TAIEX) 數據（10/28 ～ 11/24 盤中，19 筆收盤與 1 筆盤中）
+        const taiexData = [
+            { isoDate: "2026-10-28", value: 47035.58, stage: "s1", tag: "基準收盤" },
+            { isoDate: "2026-10-29", value: 46368.33, stage: "s1" },
+            { isoDate: "2026-10-30", value: 45211.83, stage: "s1", tag: "10 月 30 日收盤" },
+            { isoDate: "2026-11-02", value: 44920.14, stage: "s1" },
+            { isoDate: "2026-11-03", value: 43307.54, stage: "s1" },
+            { isoDate: "2026-11-04", value: 42948.91, stage: "s1" },
+            { isoDate: "2026-11-05", value: 41574.72, stage: "s1" },
+            { isoDate: "2026-11-06", value: 39701.64, stage: "s1", tag: "收盤跌破四萬點" },
+            { isoDate: "2026-11-09", value: 41661.70, stage: "s2", tag: "收盤回到四萬點" },
+            { isoDate: "2026-11-10", value: 41285.40, stage: "s2" },
+            { isoDate: "2026-11-11", value: 41890.15, stage: "s2" },
+            { isoDate: "2026-11-12", value: 41510.80, stage: "s2" },
+            { isoDate: "2026-11-13", value: 39885.20, stage: "s2", tag: "收盤再跌破四萬點" },
+            { isoDate: "2026-11-16", value: 39120.45, stage: "s3" },
+            { isoDate: "2026-11-17", value: 38850.60, stage: "s3" },
+            { isoDate: "2026-11-18", value: 38610.30, stage: "s3" },
+            { isoDate: "2026-11-19", value: 37980.15, stage: "s3" },
+            { isoDate: "2026-11-20", value: 36412.80, stage: "s3", tag: "區間最低收盤" },
+            { isoDate: "2026-11-23", value: 36920.50, stage: "s3" },
+            { isoDate: "2026-11-24", value: 40185.60, stage: "s3", tag: "盤中回到四萬點", status: "intraday" }
+        ];
 
-        // 取得階段對應標籤樣式
-        function getStageBadgeClasses(stage) {
-            switch (stage) {
-                case '風波前基準':
-                    return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-                case '媒體首爆期':
-                    return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
-                case '國安與國會風暴':
-                    return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
-                case '認錯與震撼請辭':
-                    return 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300';
-                case '無主震盪與谷底':
-                    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
-                case '復職大逆轉':
-                    return 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300';
-                default:
-                    return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-            }
-        }
-
-        // 格式化數字千分位
-        function formatNumber(num) {
-            return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        // ==========================================
-        // 3. Chart.js 自訂插件：繪製垂直基準線與重大節點標籤
-        // ==========================================
-        const milestoneAnnotationsPlugin = {
-            id: 'milestoneAnnotations',
-            afterDatasetsDraw(chart) {
-                const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
-                const meta = chart.getDatasetMeta(0);
-                const isDark = document.documentElement.classList.contains('dark');
-
-                ctx.save();
-
-                // 繪製當前選中節點的垂直高亮虛線
-                if (meta.data[selectedIndex]) {
-                    const activePt = meta.data[selectedIndex];
-                    ctx.beginPath();
-                    ctx.setLineDash([4, 4]);
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeStyle = isDark ? 'rgba(96, 165, 250, 0.75)' : 'rgba(37, 99, 235, 0.65)';
-                    ctx.moveTo(activePt.x, top);
-                    ctx.lineTo(activePt.x, bottom);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                }
-
-                // 繪製重大新聞節點的簡短標籤徽章
-                soxEventsData.forEach((item, idx) => {
-                    if (!item.isMilestone) return;
-                    const pt = meta.data[idx];
-                    if (!pt) return;
-
-                    const isSelected = idx === selectedIndex;
-                    const isDimmed = currentStageFilter !== 'all' && item.stageGroup !== currentStageFilter;
-                    if (isDimmed && !isSelected) return;
-
-                    const labelText = item.shortLabel || item.date.split(' ')[0];
-                    ctx.font = isSelected ? 'bold 11px "Inter", "Noto Sans TC", sans-serif' : '600 10px "Inter", "Noto Sans TC", sans-serif';
-                    const textMetrics = ctx.measureText(labelText);
-                    const padX = 6;
-                    const boxW = textMetrics.width + padX * 2;
-                    const boxH = 19;
-
-                    // 決定標籤放上方或下方避免遮擋曲線
-                    let placeAbove = true;
-                    if (idx === 5 || idx === 6 || idx === 14 || idx === 17) {
-                        placeAbove = false; // 11/04, 11/05, 11/17, 11/20 放下方較清楚
-                    }
-
-                    let boxX = pt.x - boxW / 2;
-                    // 防止超出左右邊界
-                    if (boxX < left + 2) boxX = left + 2;
-                    if (boxX + boxW > right - 2) boxX = right - boxW - 2;
-
-                    let boxY = placeAbove ? pt.y - boxH - 10 : pt.y + 10;
-                    if (boxY < top + 2) boxY = pt.y + 10;
-                    if (boxY + boxH > bottom - 2) boxY = pt.y - boxH - 10;
-
-                    // 連接小短線
-                    ctx.beginPath();
-                    ctx.strokeStyle = isSelected
-                        ? (isDark ? '#60a5fa' : '#2563eb')
-                        : (isDark ? 'rgba(251, 191, 36, 0.5)' : 'rgba(217, 119, 6, 0.45)');
-                    ctx.lineWidth = 1;
-                    ctx.moveTo(pt.x, pt.y);
-                    ctx.lineTo(pt.x, placeAbove ? boxY + boxH : boxY);
-                    ctx.stroke();
-
-                    // 繪製圓角矩形背景
-                    ctx.beginPath();
-                    const r = 5;
-                    ctx.roundRect(boxX, boxY, boxW, boxH, r);
-
-                    if (isSelected) {
-                        ctx.fillStyle = '#2563eb';
-                    } else if (item.changeVal >= 5) {
-                        ctx.fillStyle = isDark ? 'rgba(153, 27, 27, 0.9)' : 'rgba(254, 226, 226, 0.95)';
-                    } else if (item.changeVal <= -10) {
-                        ctx.fillStyle = isDark ? 'rgba(6, 78, 59, 0.9)' : 'rgba(209, 250, 229, 0.95)';
-                    } else {
-                        ctx.fillStyle = isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 251, 235, 0.95)';
-                    }
-                    ctx.fill();
-
-                    ctx.lineWidth = 1;
-                    if (isSelected) {
-                        ctx.strokeStyle = '#93c5fd';
-                    } else if (item.changeVal >= 5) {
-                        ctx.strokeStyle = isDark ? '#f87171' : '#fca5a5';
-                    } else if (item.changeVal <= -10) {
-                        ctx.strokeStyle = isDark ? '#34d399' : '#6ee7b7';
-                    } else {
-                        ctx.strokeStyle = isDark ? '#f59e0b' : '#fcd34d';
-                    }
-                    ctx.stroke();
-
-                    // 繪製文字
-                    if (isSelected) {
-                        ctx.fillStyle = '#ffffff';
-                    } else if (item.changeVal >= 5) {
-                        ctx.fillStyle = isDark ? '#fecaca' : '#b91c1c';
-                    } else if (item.changeVal <= -10) {
-                        ctx.fillStyle = isDark ? '#a7f3d0' : '#047857';
-                    } else {
-                        ctx.fillStyle = isDark ? '#fde68a' : '#92400e';
-                    }
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(labelText, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
-                });
-
-                ctx.restore();
-            }
+        const dateFormatter = new Intl.DateTimeFormat('zh-TW', {
+            timeZone: 'UTC', weekday: 'short'
+        });
+        const nyDateFormatter = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+        const ma240Reference = 39322;
+        const soxEventIndex = {
+            '2026-10-29': '原稿將此日標為媒體首次報導的日期。',
+            '2026-11-12': '原稿將此日標為輝達執行長請辭消息日。',
+            '2026-11-17': '原稿提到當日有輝達財報與執行長回任討論。',
+            '2026-11-23': '原稿將此日標為輝達執行長回任消息日。'
+        };
+        const taiexEventIndex = {
+            '2026-11-09': '原稿提到當日有國安基金進場與限空措施的消息。'
         };
 
-        // ==========================================
-        // 4. 初始化與更新 Chart.js 圖表
-        // ==========================================
-        function initChart() {
-            const ctx = document.getElementById('soxChart').getContext('2d');
-            const isDark = document.documentElement.classList.contains('dark');
+        function changePct(value, base) {
+            return (value / base - 1) * 100;
+        }
 
-            const labels = soxEventsData.map(d => d.date.split(' ')[0]);
-            const values = soxEventsData.map(d => d.close);
+        function fmtPct(value) {
+            if (value == null) return '—';
+            const rounded = Number(value.toFixed(2));
+            return `${rounded > 0 ? '+' : ''}${rounded.toFixed(2)}%`;
+        }
 
-            // 漸層填充
-            const gradient = ctx.createLinearGradient(0, 0, 0, 420);
-            if (isDark) {
-                gradient.addColorStop(0, 'rgba(59, 130, 246, 0.32)');
-                gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
-            } else {
-                gradient.addColorStop(0, 'rgba(37, 99, 235, 0.22)');
-                gradient.addColorStop(1, 'rgba(37, 99, 235, 0.01)');
-            }
+        function observationType(row) {
+            return row.status === 'intraday' ? '盤中' : '收盤';
+        }
 
-            if (soxChartInstance) {
-                soxChartInstance.destroy();
-            }
-
-            soxChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '費城半導體指數 (SOX)',
-                        data: values,
-                        borderColor: isDark ? '#3b82f6' : '#2563eb',
-                        borderWidth: 2.8,
-                        backgroundColor: gradient,
-                        fill: true,
-                        tension: 0.22,
-                        pointRadius: (ctx) => {
-                            const idx = ctx.dataIndex;
-                            if (idx === selectedIndex) return 8;
-                            return soxEventsData[idx].isMilestone ? 6 : 3.5;
-                        },
-                        pointHoverRadius: 9,
-                        pointBackgroundColor: (ctx) => {
-                            const idx = ctx.dataIndex;
-                            const item = soxEventsData[idx];
-                            if (idx === selectedIndex) return '#2563eb';
-                            if (item.isMilestone) {
-                                if (item.changeVal >= 5) return '#dc2626'; // 台股紅漲
-                                if (item.changeVal <= -10) return '#16a34a'; // 台股綠跌
-                                return '#f59e0b';
-                            }
-                            return isDark ? '#93c5fd' : '#ffffff';
-                        },
-                        pointBorderColor: (ctx) => {
-                            const idx = ctx.dataIndex;
-                            if (idx === selectedIndex) return '#ffffff';
-                            return soxEventsData[idx].isMilestone ? '#ffffff' : (isDark ? '#3b82f6' : '#2563eb');
-                        },
-                        pointBorderWidth: (ctx) => {
-                            const idx = ctx.dataIndex;
-                            if (idx === selectedIndex) return 3;
-                            return soxEventsData[idx].isMilestone ? 2 : 1.5;
-                        },
-                        segment: {
-                            borderColor: (ctx) => {
-                                if (currentStageFilter === 'all') {
-                                    return isDark ? '#3b82f6' : '#2563eb';
-                                }
-                                const p0 = soxEventsData[ctx.p0DataIndex];
-                                const p1 = soxEventsData[ctx.p1DataIndex];
-                                const inStage = p0.stageGroup === currentStageFilter || p1.stageGroup === currentStageFilter;
-                                return inStage
-                                    ? (isDark ? '#3b82f6' : '#2563eb')
-                                    : (isDark ? 'rgba(71, 85, 105, 0.35)' : 'rgba(203, 213, 225, 0.65)');
-                            }
-                        }
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
-                    onClick: (event, elements) => {
-                        if (elements && elements.length > 0) {
-                            const idx = elements[0].index;
-                            selectIndex(idx);
-                        }
-                    },
-                    onHover: (event, elements) => {
-                        const canvas = event.native.target;
-                        canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                        if (elements && elements.length > 0) {
-                            const idx = elements[0].index;
-                            // 滑鼠移動時同步更新右側面板，方便即時瀏覽
-                            updateDetailPanel(idx);
-                            highlightTableRow(idx, false);
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            enabled: false, // 停用預設 Tooltip，改用自訂 HTML Tooltip
-                            external: handleCustomTooltip
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: isDark ? '#94a3b8' : '#64748b',
-                                font: {
-                                    family: 'Inter, Noto Sans TC',
-                                    size: 11,
-                                    weight: '600'
-                                },
-                                maxRotation: 0,
-                                autoSkip: true,
-                                maxTicksLimit: 10
-                            }
-                        },
-                        y: {
-                            min: 8000,
-                            max: 12200,
-                            grid: {
-                                color: isDark ? 'rgba(51, 65, 85, 0.45)' : 'rgba(226, 232, 240, 0.8)',
-                                borderDash: [3, 3]
-                            },
-                            ticks: {
-                                color: isDark ? '#94a3b8' : '#64748b',
-                                font: {
-                                    family: 'Inter, Noto Sans TC',
-                                    size: 11,
-                                    weight: '600'
-                                },
-                                callback: (val) => val.toLocaleString()
-                            }
-                        }
-                    }
-                },
-                plugins: [milestoneAnnotationsPlugin]
-            });
-
-            // 滑鼠離開 Canvas 時恢復為已點擊鎖定的 selectedIndex 詳情
-            document.getElementById('soxChart').addEventListener('mouseleave', () => {
-                updateDetailPanel(selectedIndex);
-                highlightTableRow(selectedIndex, false);
+        function preparePrices(rows) {
+            rows.forEach((row, index) => {
+                const previous = rows[index - 1];
+                const date = row.isoDate.replaceAll('-', '/');
+                const weekday = dateFormatter.format(new Date(row.isoDate + 'T00:00:00Z'));
+                row.date = `${date} (${weekday})`;
+                row.short = date.slice(5);
+                row.pctVal = previous ? changePct(row.value, previous.value) : null;
+                row.cumPct = changePct(row.value, rows[0].value);
             });
         }
 
-        // ==========================================
-        // 5. 自訂 HTML 懸浮 Tooltip 處理
-        // ==========================================
-        function handleCustomTooltip(context) {
-            const { chart, tooltip } = context;
-            const tooltipEl = document.getElementById('custom-tooltip');
+        preparePrices(soxData);
+        preparePrices(taiexData);
 
-            if (tooltip.opacity === 0) {
-                tooltipEl.classList.add('hidden');
+        // 台灣正常交易日開盤時，美東仍為前一天晚間，已過美股常規收盤時間。
+        // 附件未提供逐筆時間，因此用台股開盤作為整個交易時段的配對截止點。
+        function buildComparison(twRows, usRows) {
+            return twRows.map(taiwan => {
+                const dateInNewYork = nyDateFormatter.format(
+                    new Date(taiwan.isoDate + 'T09:00:00+08:00')
+                );
+                const sox = usRows.findLast(row => row.isoDate <= dateInNewYork);
+                return { ...taiwan, taiwan, sox };
+            });
+        }
+
+        const compareData = buildComparison(taiexData, soxData);
+
+        // =========================================================
+        // 2. 全域狀態管理
+        // =========================================================
+        let activeMarket = 'sox'; // 'sox' | 'taiex' | 'compare'
+        let selectedIdx = soxData.length - 1; // 預設選取最新一日
+        let stageFilter = 'all'; // 'all' | 's1' | 's2' | 's3'
+        let showMa240 = true;
+
+        const svg = document.getElementById('main-svg');
+        const svgContainer = document.getElementById('svg-container');
+        const tooltipEl = document.getElementById('svg-tooltip');
+        const chartDate = document.getElementById('chart-date');
+        const kpiGrid = document.getElementById('kpi-grid');
+
+        function changeClass(value) {
+            if (value == null || value === 0) return '';
+            return value > 0 ? 'up-text' : 'down-text';
+        }
+
+        function shortSignedPoints(value) {
+            return `${value > 0 ? '+' : ''}${fmtNum(value)} 點`;
+        }
+
+        function fmtNum(n) {
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function createSvgEl(tag, attrs = {}) {
+            const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            for (const [k, v] of Object.entries(attrs)) {
+                el.setAttribute(k, v);
+            }
+            return el;
+        }
+
+        function getCurrentDataset() {
+            if (activeMarket === 'sox') return soxData;
+            if (activeMarket === 'taiex') return taiexData;
+            return compareData;
+        }
+
+        // =========================================================
+        // 3. 市場切換與 KPI 卡片動態渲染
+        // =========================================================
+        function updatePressed(selector, key, value) {
+            document.querySelectorAll(selector).forEach(button => {
+                const pressed = button.dataset[key] === value;
+                button.classList.toggle('active', pressed);
+                button.setAttribute('aria-pressed', pressed);
+            });
+        }
+
+        function switchMarket(market) {
+            activeMarket = market;
+            updatePressed('.market-tab-btn', 'market', market);
+            stageFilter = 'all';
+            updatePressed('.stage-btn', 'stage', stageFilter);
+
+            const compare = market === 'compare';
+            document.getElementById('extra-toggles-box').style.display = market === 'taiex' ? 'flex' : 'none';
+            document.getElementById('market-hint-text').textContent = {
+                sox: '費半收盤採美東日期',
+                taiex: '台股採台灣日期，最後一筆為盤中',
+                compare: '橫軸為台灣交易日'
+            }[market];
+            document.getElementById('chart-note').textContent = compare
+                ? '兩市各以 10/28 收盤為基準。費半配對台股開盤前最近一筆收盤。10/28 缺少可配對的費半資料。台股空心菱形為 11/24 盤中觀測。'
+                : market === 'taiex'
+                    ? '空心菱形為 11/24 盤中觀測。附件未提供觀測時間，也未提供 39,322 點年線參考值的基準日。'
+                    : '基準日缺少前一日收盤，單日漲跌幅以 — 表示。';
+
+            const dataset = getCurrentDataset();
+            renderKPIs(dataset);
+            renderQuickPills();
+            renderTable();
+            selectIndex(dataset.length - 1);
+        }
+
+        function kpiCard(row, label, tag, value, description, tone = 'neutral') {
+            return `
+                <button type="button" class="kpi-card" data-date="${row.isoDate}">
+                    <span class="kpi-top">
+                        <span class="kpi-label">${label}</span>
+                        <span class="kpi-tag tag-${tone}">${tag}</span>
+                    </span>
+                    <span class="kpi-value tabular-nums">${value}</span>
+                    <span class="kpi-desc">${description}</span>
+                </button>
+            `;
+        }
+
+        function renderKPIs(dataset) {
+            const first = dataset[0];
+            const latest = dataset.at(-1);
+            if (activeMarket === 'compare') {
+                const firstPair = dataset.find(row => row.sox);
+                const taiexLow = dataset.filter(row => row.status !== 'intraday')
+                    .reduce((low, row) => row.value < low.value ? row : low);
+                const soxLow = dataset.filter(row => row.sox)
+                    .reduce((low, row) => row.sox.value < low.sox.value ? row : low);
+                kpiGrid.innerHTML = [
+                    kpiCard(firstPair, '第一筆配對', firstPair.short,
+                        `費半 ${firstPair.sox.short}`, `費半 ${fmtPct(firstPair.sox.cumPct)}｜台股 ${fmtPct(firstPair.cumPct)}（累計）`),
+                    kpiCard(taiexLow, '台股最低收盤的配對', taiexLow.short,
+                        `台股 ${fmtPct(taiexLow.cumPct)}`, `費半 ${taiexLow.sox.short} 收盤 ${fmtPct(taiexLow.sox.cumPct)}（累計）`, 'down'),
+                    kpiCard(soxLow, '費半最低收盤的配對', `費半 ${soxLow.sox.short}`,
+                        `費半 ${fmtPct(soxLow.sox.cumPct)}`, `台股 ${soxLow.short} 收盤 ${fmtPct(soxLow.cumPct)}（累計）`, 'down'),
+                    kpiCard(latest, '最後一筆配對', latest.short,
+                        `台股 ${observationType(latest)} ${fmtPct(latest.pctVal)}`,
+                        `費半 ${latest.sox.short} 收盤 ${fmtPct(latest.sox.pctVal)}（各自較前收）`, 'up')
+                ].join('');
                 return;
             }
 
-            const dataIndex = tooltip.dataPoints[0].dataIndex;
-            const item = soxEventsData[dataIndex];
-
-            document.getElementById('tt-date').textContent = `2026/${item.date}`;
-            const stageEl = document.getElementById('tt-stage');
-            stageEl.textContent = item.stage;
-            stageEl.className = `px-2 py-0.5 rounded text-[10px] font-bold ${getStageBadgeClasses(item.stage)}`;
-
-            document.getElementById('tt-close').textContent = `${formatNumber(item.close)} 點`;
-
-            const changeEl = document.getElementById('tt-change');
-            changeEl.textContent = item.change;
-            changeEl.className = `text-xs font-extrabold tabular-nums ${
-                item.changeVal >= 0
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
-            }`;
-
-            document.getElementById('tt-title').textContent = item.title;
-            document.getElementById('tt-summary').textContent = item.summary;
-
-            tooltipEl.classList.remove('hidden');
-
-            // 智慧計算位置避免超出圖表邊界
-            const chartW = chart.width;
-            const chartH = chart.height;
-            const ttW = tooltipEl.offsetWidth || 300;
-            const ttH = tooltipEl.offsetHeight || 160;
-
-            let left = tooltip.caretX + 14;
-            if (left + ttW > chartW - 8) {
-                left = tooltip.caretX - ttW - 14;
-            }
-            if (left < 8) left = 8;
-
-            let top = tooltip.caretY - ttH / 2;
-            if (top < 8) top = 8;
-            if (top + ttH > chartH - 8) top = chartH - ttH - 8;
-
-            tooltipEl.style.transform = `translate(${left}px, ${top}px)`;
+            const closingRows = dataset.filter(row => row.status !== 'intraday');
+            const low = closingRows.reduce((minimum, row) => row.value < minimum.value ? row : minimum);
+            const lastClose = closingRows.at(-1);
+            const market = activeMarket === 'sox' ? '費半' : '台股';
+            kpiGrid.innerHTML = [
+                kpiCard(first, `${market}基準收盤`, first.short,
+                    fmtNum(first.value), '累計漲跌幅的計算基準'),
+                kpiCard(low, `${market}區間最低收盤`, low.short,
+                    fmtNum(low.value), `較基準 ${fmtPct(low.cumPct)}`, 'down'),
+                kpiCard(lastClose, `${market}最後一筆收盤`, lastClose.short,
+                    fmtNum(lastClose.value), `較前收 ${fmtPct(lastClose.pctVal)}`),
+                kpiCard(latest, latest.status === 'intraday' ? '台股盤中觀測' : '費半較最低收盤',
+                    latest.short, latest.status === 'intraday' ? fmtNum(latest.value) : shortSignedPoints(latest.value - low.value),
+                    latest.status === 'intraday' ? `較前收 ${fmtPct(latest.pctVal)}｜時間未提供` : `較最低收盤 ${fmtPct(changePct(latest.value, low.value))}`)
+            ].join('');
         }
 
-        // ==========================================
-        // 6. 更新右側詳情面板與連動控制
-        // ==========================================
-        function updateDetailPanel(idx) {
-            const item = soxEventsData[idx];
-            if (!item) return;
-
-            document.getElementById('detail-date').textContent = `2026/${item.date}`;
-
-            const badge = document.getElementById('detail-milestone-badge');
-            if (item.isMilestone) {
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+        kpiGrid.addEventListener('click', event => {
+            const button = event.target.closest('button[data-date]');
+            if (button) {
+                selectIndex(getCurrentDataset().findIndex(row => row.isoDate === button.dataset.date), true);
             }
+        });
 
-            const stageEl = document.getElementById('detail-stage');
-            stageEl.textContent = item.stage;
-            stageEl.className = `px-2.5 py-1 rounded-lg text-xs font-bold ${getStageBadgeClasses(item.stage)}`;
+        // =========================================================
+        // 4. 繪製高精度互動 SVG 圖表
+        // =========================================================
+        function renderChart() {
+            svg.replaceChildren();
+            tooltipEl.classList.remove('visible');
 
-            document.getElementById('detail-close').textContent = formatNumber(item.close);
+            const W = Math.max(240, svg.clientWidth);
+            const compact = W < 540;
+            const H = compact ? 260 : 400;
+            const pad = compact
+                ? { top: 20, right: 24, bottom: 32, left: 48 }
+                : { top: 40, right: 32, bottom: 44, left: 68 };
+            svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+            svg.style.aspectRatio = `${W} / ${H}`;
+            const plotW = W - pad.left - pad.right;
+            const plotH = H - pad.top - pad.bottom;
 
-            const changeEl = document.getElementById('detail-change');
-            changeEl.textContent = item.change;
-            changeEl.className = `mt-0.5 text-xl font-black tabular-nums ${
-                item.changeVal >= 0
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
-            }`;
+            const isDark = !document.documentElement.classList.contains('light');
+            const colorGrid = isDark ? 'rgba(148, 163, 184, 0.13)' : 'rgba(100, 116, 139, 0.16)';
+            const colorAxisText = isDark ? '#94a3b8' : '#475569';
+            const colorSox = isDark ? '#38bdf8' : '#0284c7';
+            const colorTaiex = isDark ? '#f43f5e' : '#e11d48';
+            const colorMa240 = isDark ? '#f59e0b' : '#d97706';
 
-            document.getElementById('detail-title').textContent = item.title;
-            document.getElementById('detail-summary').textContent = item.summary;
+            const defs = createSvgEl('defs');
+            const mainColor = activeMarket === 'sox' ? colorSox : colorTaiex;
+            const grad = createSvgEl('linearGradient', { id: 'areaGrad', x1: '0', y1: '0', x2: '0', y2: '1' });
+            grad.appendChild(createSvgEl('stop', { offset: '0%', 'stop-color': mainColor, 'stop-opacity': isDark ? '0.28' : '0.18' }));
+            grad.appendChild(createSvgEl('stop', { offset: '100%', 'stop-color': mainColor, 'stop-opacity': '0.0' }));
+            defs.appendChild(grad);
+            svg.appendChild(defs);
 
-            // 更新快速膠囊按鈕的選中樣式
-            document.querySelectorAll('.milestone-pill').forEach(btn => {
-                const btnIdx = parseInt(btn.dataset.index, 10);
-                if (btnIdx === idx) {
-                    btn.className = 'milestone-pill px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-600 text-white shadow-sm transition cursor-pointer';
-                } else {
-                    btn.className = 'milestone-pill px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-400 transition cursor-pointer';
-                }
-            });
-        }
-
-        function selectIndex(idx, scrollToChart = false) {
-            selectedIndex = idx;
-            updateDetailPanel(idx);
-            highlightTableRow(idx, false);
-            if (soxChartInstance) {
-                soxChartInstance.update();
-            }
-            if (scrollToChart) {
-                document.getElementById('chart-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-
-        function selectIndexByDate(dateStr) {
-            const idx = soxEventsData.findIndex(d => d.date === dateStr);
-            if (idx !== -1) {
-                selectIndex(idx, true);
-            }
-        }
-
-        // 上一個 / 下一個重大事件導覽
-        function navigateMilestone(direction) {
-            const milestoneIndices = soxEventsData
-                .map((d, i) => d.isMilestone ? i : -1)
+            const dataset = getCurrentDataset();
+            const visibleIndices = dataset
+                .map((d, i) => (stageFilter === 'all' || d.stage === stageFilter ? i : -1))
                 .filter(i => i !== -1);
 
-            if (direction === 1) {
-                const next = milestoneIndices.find(i => i > selectedIndex);
-                selectIndex(next !== undefined ? next : milestoneIndices[0]);
-            } else {
-                const prev = [...milestoneIndices].reverse().find(i => i < selectedIndex);
-                selectIndex(prev !== undefined ? prev : milestoneIndices[milestoneIndices.length - 1]);
-            }
-        }
+            const count = visibleIndices.length;
+            const getX = (posInVisible) => {
+                if (count === 1) return pad.left + plotW / 2;
+                return pad.left + (posInVisible / (count - 1)) * plotW;
+            };
 
-        // 階段篩選器
-        function setStageFilter(stageKey) {
-            currentStageFilter = stageKey;
-
-            // 更新按鈕外觀
-            document.querySelectorAll('.stage-btn').forEach(btn => {
-                if (btn.dataset.stage === stageKey) {
-                    btn.className = 'stage-btn active px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition cursor-pointer';
-                } else {
-                    btn.className = 'stage-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer';
-                }
-            });
-
-            // 自動聚焦該階段第一個重大事件
-            if (stageKey !== 'all') {
-                const targetIdx = soxEventsData.findIndex(d => d.stageGroup === stageKey && d.isMilestone);
-                if (targetIdx !== -1) {
-                    selectedIndex = targetIdx;
-                    updateDetailPanel(targetIdx);
-                    highlightTableRow(targetIdx, false);
-                }
-            }
-
-            if (soxChartInstance) {
-                soxChartInstance.update();
-            }
-        }
-
-        // ==========================================
-        // 7. 渲染重大節點膠囊與底部完整明細表
-        // ==========================================
-        function renderMilestonePills() {
-            const container = document.getElementById('milestone-pills');
-            container.innerHTML = '';
-
-            soxEventsData.forEach((item, idx) => {
-                if (!item.isMilestone) return;
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.dataset.index = idx;
-                btn.textContent = item.date.split(' ')[0];
-                btn.title = item.title;
-                btn.onclick = () => selectIndex(idx);
-                container.appendChild(btn);
-            });
-        }
-
-        function renderDataTable() {
-            const tbody = document.getElementById('data-table-body');
-            tbody.innerHTML = '';
-
-            soxEventsData.forEach((item, idx) => {
-                const tr = document.createElement('tr');
-                tr.id = `table-row-${idx}`;
-                tr.className = `data-row cursor-pointer hover:bg-blue-50/70 dark:hover:bg-slate-800/80 ${
-                    item.isMilestone ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''
-                }`;
-                tr.onclick = () => selectIndex(idx, true);
-
-                const changeColorClass = item.changeVal >= 0
-                    ? 'text-red-600 dark:text-red-400 font-bold'
-                    : 'text-emerald-600 dark:text-emerald-400 font-bold';
-
-                tr.innerHTML = `
-                    <td class="py-3.5 px-4 whitespace-nowrap font-bold tabular-nums text-slate-900 dark:text-white">
-                        <div class="flex items-center gap-1.5">
-                            ${item.isMilestone
-                                ? '<span class="text-amber-500 text-xs" title="重大轉折">★</span>'
-                                : '<span class="w-3 inline-block"></span>'}
-                            <span>${item.date}</span>
-                        </div>
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap text-right font-extrabold tabular-nums text-slate-800 dark:text-slate-100">
-                        ${formatNumber(item.close)}
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap text-right tabular-nums ${changeColorClass}">
-                        ${item.change}
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="px-2.5 py-0.5 rounded-md text-xs font-bold ${getStageBadgeClasses(item.stage)}">
-                            ${item.stage}
-                        </span>
-                    </td>
-                    <td class="py-3.5 px-4">
-                        <div class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">${item.title}</div>
-                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">${item.summary}</div>
-                    </td>
+            // 更新圖例列
+            const legendEl = document.getElementById('chart-legend');
+            if (activeMarket === 'sox') {
+                legendEl.innerHTML = `
+                    <span class="legend-item"><span class="swatch-line" style="background:${colorSox}"></span>🇺🇸 費城半導體指數 (SOX) 收盤線</span>
+                    <span class="legend-item"><span class="swatch-dash" style="border-color:${colorAxisText}"></span>10,000 點整數關卡</span>
                 `;
-                tbody.appendChild(tr);
-            });
-        }
+            } else if (activeMarket === 'taiex') {
+                legendEl.innerHTML = `
+                    <span class="legend-item"><span class="swatch-line" style="background:${colorTaiex}"></span>🇹🇼 台灣加權指數 (TAIEX)</span>
+                    <span class="legend-item"><span class="swatch-dash" style="border-color:${colorAxisText}"></span>40,000 點心理關卡</span>
+                    ${showMa240 ? `<span class="legend-item"><span class="swatch-dash" style="border-color:${colorMa240}"></span>年線參考值（${fmtNum(ma240Reference)} 點）</span>` : ''}
+                `;
+            } else {
+                legendEl.innerHTML = `
+                    <span class="legend-item"><span class="swatch-line" style="background:${colorSox}"></span>🇺🇸 費半 SOX 累計漲跌幅 (%)</span>
+                    <span class="legend-item"><span class="swatch-line" style="background:${colorTaiex}"></span>🇹🇼 台股 TAIEX 累計漲跌幅 (%)</span>
+                    <span class="legend-item"><span class="swatch-dash" style="border-color:${colorAxisText}"></span>10/28 基準線 (0%)</span>
+                `;
+            }
 
-        function highlightTableRow(idx) {
-            document.querySelectorAll('.data-row').forEach((row, i) => {
-                if (i === idx) {
-                    row.classList.add('ring-2', 'ring-inset', 'ring-blue-500', 'bg-blue-50/80', 'dark:bg-blue-950/40');
-                } else {
-                    row.classList.remove('ring-2', 'ring-inset', 'ring-blue-500', 'bg-blue-50/80', 'dark:bg-blue-950/40');
+            // =====================================================
+            // 模式 A：單市場走勢圖（SOX 或 TAIEX）
+            // =====================================================
+            if (activeMarket === 'sox' || activeMarket === 'taiex') {
+                const isSox = activeMarket === 'sox';
+                const yMin = isSox ? 8000 : 35000;
+                const yMax = isSox ? 12200 : 48000;
+                const yTicks = isSox
+                    ? [8000, 9000, 10000, 11000, 12000]
+                    : [36000, 38000, 40000, 42000, 44000, 46000, 48000];
+
+                const getY = (val) => pad.top + ((yMax - val) / (yMax - yMin)) * plotH;
+
+                // Y 軸格線與刻度
+                yTicks.forEach(tick => {
+                    const y = getY(tick);
+                    const isKeyLine = (isSox && tick === 10000) || (!isSox && tick === 40000);
+                    svg.appendChild(createSvgEl('line', {
+                        x1: pad.left, y1: y, x2: W - pad.right, y2: y,
+                        stroke: isKeyLine ? (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(15,23,42,0.35)') : colorGrid,
+                        'stroke-width': isKeyLine ? 1.4 : 1,
+                        'stroke-dasharray': isKeyLine ? '6,4' : 'none'
+                    }));
+                    const txt = createSvgEl('text', {
+                        x: pad.left - 10, y: y + 4,
+                        fill: colorAxisText, 'font-size': '11', 'font-weight': '600', 'text-anchor': 'end'
+                    });
+                    txt.textContent = tick.toLocaleString();
+                    svg.appendChild(txt);
+                });
+
+                // 台股年線參考值
+                if (!isSox && showMa240) {
+                    const yMa = getY(ma240Reference);
+                    svg.appendChild(createSvgEl('line', {
+                        x1: pad.left, y1: yMa, x2: W - pad.right, y2: yMa,
+                        stroke: colorMa240, 'stroke-width': 1.6, 'stroke-dasharray': '4,3'
+                    }));
+                    const maLbl = createSvgEl('text', {
+                        x: pad.left + 8, y: yMa + 14,
+                        fill: colorMa240, 'font-size': '11', 'font-weight': '800'
+                    });
+                    maLbl.textContent = `年線參考值 ${ma240Reference.toLocaleString('en-US')}`;
+                    svg.appendChild(maLbl);
                 }
-            });
+
+                const pts = visibleIndices.map((dataIdx, visPos) => {
+                    const d = dataset[dataIdx];
+                    return {
+                        dataIdx,
+                        visPos,
+                        x: getX(visPos),
+                        y: getY(d.value),
+                        data: d
+                    };
+                });
+
+                const closingPoints = pts.filter(p => p.data.status !== 'intraday');
+                if (closingPoints.length > 1) {
+                    const areaD = `M ${closingPoints[0].x} ${H - pad.bottom} ` +
+                        closingPoints.map(p => `L ${p.x} ${p.y}`).join(' ') +
+                        ` L ${closingPoints.at(-1).x} ${H - pad.bottom} Z`;
+                    svg.appendChild(createSvgEl('path', { d: areaD, fill: 'url(#areaGrad)' }));
+
+                    const lineD = closingPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                    svg.appendChild(createSvgEl('path', {
+                        d: lineD, fill: 'none', stroke: mainColor,
+                        'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+                    }));
+                }
+
+                drawIntradaySegment(pts, 'y', mainColor);
+
+                // 選中節點垂直虛線
+                const activePt = pts.find(p => p.dataIdx === selectedIdx);
+                if (activePt) {
+                    svg.appendChild(createSvgEl('line', {
+                        x1: activePt.x, y1: pad.top, x2: activePt.x, y2: H - pad.bottom,
+                        stroke: isDark ? 'rgba(255,255,255,0.38)' : 'rgba(15,23,42,0.3)',
+                        'stroke-width': 1.5, 'stroke-dasharray': '4,3'
+                    }));
+                }
+
+                // 繪製節點與標籤氣泡
+                pts.forEach((p, visPos) => {
+                    const d = p.data;
+                    const isSelected = p.dataIdx === selectedIdx;
+                    const isMilestone = Boolean(d.tag);
+
+                    const labelStride = Math.ceil(count / (compact ? 4 : Math.floor(plotW / 48)));
+                    const showXLabel = visPos === 0 || visPos === count - 1 ||
+                        (visPos % labelStride === 0 && (count - 1 - visPos) * plotW / Math.max(1, count - 1) >= 36);
+                    if (showXLabel) {
+                        const xTxt = createSvgEl('text', {
+                            x: p.x, y: H - pad.bottom + 20,
+                            fill: isSelected ? mainColor : colorAxisText,
+                            'font-size': isSelected ? '11.5' : '10.5',
+                            'font-weight': isSelected ? '800' : '600',
+                            'text-anchor': 'middle'
+                        });
+                        xTxt.textContent = d.short;
+                        svg.appendChild(xTxt);
+                    }
+
+                    if (isMilestone && !compact && isSelected) {
+                        drawCalloutBubble(svg, p.x, p.y, d.tag, d.pos || 'top', isSelected, isDark, pad, W, H);
+                    }
+
+                    // 節點圓點（依台股紅漲綠跌配色）
+                    const r = isSelected ? 7.5 : (isMilestone ? 5.5 : 3.8);
+                    const dotFill = isSelected
+                        ? '#ffffff'
+                        : (d.pctVal ? (d.pctVal > 0 ? '#ef4444' : '#10b981') : mainColor);
+
+                    drawPoint(p, p.y, r, dotFill, isSelected ? mainColor : (isDark ? '#0f172a' : '#ffffff'),
+                        isSelected, d.status === 'intraday');
+
+                    const hitWidth = count > 1 ? plotW / (count - 1) : plotW;
+                    const hitZone = createSvgEl('rect', {
+                        x: p.x - hitWidth / 2,
+                        y: pad.top,
+                        width: hitWidth,
+                        height: plotH,
+                        fill: 'transparent',
+                        style: 'cursor: pointer;'
+                    });
+                    if (!compact) hitZone.addEventListener('mouseenter', () => handlePointHover(p.dataIdx, p.x, p.y));
+                    hitZone.addEventListener('click', () => selectIndex(p.dataIdx));
+                    svg.appendChild(hitZone);
+                });
+
+            } else {
+                // =====================================================
+                // 模式 B：美台雙線連動對照 (累計漲跌幅 %)
+                // =====================================================
+                const yMin = -32;
+                const yMax = 5;
+                const getY = (val) => pad.top + ((yMax - val) / (yMax - yMin)) * plotH;
+
+                const yTicks = [5, 0, -5, -10, -15, -20, -25, -30];
+                yTicks.forEach(tick => {
+                    const y = getY(tick);
+                    const isZero = tick === 0;
+                    svg.appendChild(createSvgEl('line', {
+                        x1: pad.left, y1: y, x2: W - pad.right, y2: y,
+                        stroke: isZero ? (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(15,23,42,0.35)') : colorGrid,
+                        'stroke-width': isZero ? 1.5 : 1,
+                        'stroke-dasharray': isZero ? '5,4' : 'none'
+                    }));
+                    const txt = createSvgEl('text', {
+                        x: pad.left - 10, y: y + 4,
+                        fill: colorAxisText, 'font-size': '11', 'font-weight': '600', 'text-anchor': 'end'
+                    });
+                    txt.textContent = tick > 0 ? `+${tick}%` : `${tick}%`;
+                    svg.appendChild(txt);
+                });
+
+                const pts = visibleIndices.map((dataIdx, visPos) => {
+                    const d = compareData[dataIdx];
+                    return {
+                        dataIdx,
+                        visPos,
+                        x: getX(visPos),
+                        ySox: d.sox ? getY(d.sox.cumPct) : null,
+                        yTaiex: getY(d.cumPct),
+                        data: d
+                    };
+                });
+
+                if (pts.length > 1) {
+                    const soxD = pts.filter(p => p.ySox != null).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.ySox}`).join(' ');
+                    svg.appendChild(createSvgEl('path', {
+                        d: soxD, fill: 'none', stroke: colorSox,
+                        'stroke-width': 2.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+                    }));
+
+                    const taiexD = pts.filter(p => p.data.status !== 'intraday').map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.yTaiex}`).join(' ');
+                    svg.appendChild(createSvgEl('path', {
+                        d: taiexD, fill: 'none', stroke: colorTaiex,
+                        'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+                    }));
+                }
+
+                drawIntradaySegment(pts, 'yTaiex', colorTaiex);
+
+                const activePt = pts.find(p => p.dataIdx === selectedIdx);
+                if (activePt) {
+                    svg.appendChild(createSvgEl('line', {
+                        x1: activePt.x, y1: pad.top, x2: activePt.x, y2: H - pad.bottom,
+                        stroke: isDark ? 'rgba(255,255,255,0.38)' : 'rgba(15,23,42,0.3)',
+                        'stroke-width': 1.5, 'stroke-dasharray': '4,3'
+                    }));
+                }
+
+                pts.forEach((p, visPos) => {
+                    const d = p.data;
+                    const isSelected = p.dataIdx === selectedIdx;
+                    const isMilestone = Boolean(d.tag);
+
+                    const labelStride = Math.ceil(count / (compact ? 4 : Math.floor(plotW / 48)));
+                    const showXLabel = visPos === 0 || visPos === count - 1 ||
+                        (visPos % labelStride === 0 && (count - 1 - visPos) * plotW / Math.max(1, count - 1) >= 36);
+                    if (showXLabel) {
+                        const xTxt = createSvgEl('text', {
+                            x: p.x, y: H - pad.bottom + 20,
+                            fill: isSelected ? colorTaiex : colorAxisText,
+                            'font-size': isSelected ? '11.5' : '10.5',
+                            'font-weight': isSelected ? '800' : '600',
+                            'text-anchor': 'middle'
+                        });
+                        xTxt.textContent = d.short;
+                        svg.appendChild(xTxt);
+                    }
+
+                    if (isMilestone && !compact && isSelected) {
+                        drawCalloutBubble(svg, p.x, p.yTaiex, d.tag, d.pos || 'top', isSelected, isDark, pad, W, H);
+                    }
+
+                    // SOX 點
+                    if (p.ySox != null) svg.appendChild(createSvgEl('circle', {
+                        cx: p.x, cy: p.ySox, r: isSelected ? 6 : 3.5,
+                        fill: isSelected ? '#ffffff' : colorSox,
+                        stroke: colorSox, 'stroke-width': isSelected ? 2.5 : 1.5
+                    }));
+
+                    // TAIEX 點
+                    drawPoint(p, p.yTaiex, isSelected ? 7 : 4.2,
+                        isSelected ? '#ffffff' : colorTaiex, colorTaiex, isSelected, d.status === 'intraday');
+
+                    const hitWidth = count > 1 ? plotW / (count - 1) : plotW;
+                    const hitZone = createSvgEl('rect', {
+                        x: p.x - hitWidth / 2,
+                        y: pad.top,
+                        width: hitWidth,
+                        height: plotH,
+                        fill: 'transparent',
+                        style: 'cursor: pointer;'
+                    });
+                    if (!compact) hitZone.addEventListener('mouseenter', () => handlePointHover(p.dataIdx, p.x, p.yTaiex));
+                    hitZone.addEventListener('click', () => selectIndex(p.dataIdx));
+                    svg.appendChild(hitZone);
+                });
+            }
         }
 
-        // ==========================================
-        // 8. 深色/淺色切換 & 截圖展示模式
-        // ==========================================
+        function drawIntradaySegment(points, yKey, color) {
+            const latest = points.at(-1);
+            if (points.length < 2 || latest.data.status !== 'intraday') return;
+            const previous = points.at(-2);
+            svg.appendChild(createSvgEl('line', {
+                x1: previous.x, y1: previous[yKey], x2: latest.x, y2: latest[yKey],
+                stroke: color, 'stroke-width': 2.8, 'stroke-dasharray': '5,4'
+            }));
+        }
+
+        function drawPoint(point, y, radius, fill, stroke, selected, intraday) {
+            const style = { stroke, 'stroke-width': selected ? 3 : 1.5 };
+            const marker = intraday
+                ? createSvgEl('polygon', {
+                    points: `${point.x},${y - radius} ${point.x + radius},${y} ${point.x},${y + radius} ${point.x - radius},${y}`,
+                    fill: 'var(--bg-card-elevated)', ...style
+                })
+                : createSvgEl('circle', { cx: point.x, cy: y, r: radius, fill, ...style });
+            svg.appendChild(marker);
+        }
+
+        function drawCalloutBubble(svg, px, py, text, pos, isSelected, isDark, pad, W, H) {
+            const charW = 10.2;
+            const estWidth = Math.max(86, text.length * charW + 14);
+            const boxH = 22;
+
+            let bx = px - estWidth / 2;
+            if (bx < pad.left + 2) bx = pad.left + 2;
+            if (bx + estWidth > W - pad.right - 2) bx = W - pad.right - estWidth - 2;
+
+            let by = pos === 'top' ? py - boxH - 12 : py + 12;
+            if (by < 6) by = py + 12;
+            if (by + boxH > H - pad.bottom - 4) by = py - boxH - 12;
+
+            svg.appendChild(createSvgEl('line', {
+                x1: px, y1: py,
+                x2: px, y2: pos === 'top' ? by + boxH : by,
+                stroke: isSelected ? '#38bdf8' : (isDark ? 'rgba(251, 191, 36, 0.55)' : 'rgba(217, 119, 6, 0.5)'),
+                'stroke-width': 1.2
+            }));
+
+            svg.appendChild(createSvgEl('rect', {
+                x: bx, y: by, width: estWidth, height: boxH, rx: 6,
+                fill: isSelected
+                    ? '#2563eb'
+                    : (isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)'),
+                stroke: isSelected
+                    ? '#60a5fa'
+                    : (isDark ? 'rgba(251, 191, 36, 0.5)' : 'rgba(217, 119, 6, 0.55)'),
+                'stroke-width': 1.2
+            }));
+
+            const lbl = createSvgEl('text', {
+                x: bx + estWidth / 2,
+                y: by + 14.5,
+                fill: isSelected ? '#ffffff' : (isDark ? '#fde68a' : '#92400e'),
+                'font-size': '10.5',
+                'font-weight': '800',
+                'text-anchor': 'middle'
+            });
+            lbl.textContent = text;
+            svg.appendChild(lbl);
+        }
+
+        // =========================================================
+        // 5. Tooltip 懸浮與右側焦點詳情面板更新
+        // =========================================================
+        svgContainer.addEventListener('mouseleave', () => {
+            tooltipEl.classList.remove('visible');
+        });
+
+        function marketObservations(row) {
+            if (activeMarket === 'compare') {
+                return [['台股', row.taiwan], ['費半', row.sox]];
+            }
+            return [[activeMarket === 'sox' ? '費半' : '台股', row]];
+        }
+
+        function handlePointHover(index, x, y) {
+            const row = getCurrentDataset()[index];
+            tooltipEl.innerHTML = marketObservations(row).map(([market, price]) => price
+                ? `<div><strong>${market} ${price.short} ${observationType(price)}</strong>
+                    ${fmtNum(price.value)} 點<br>較前收 ${fmtPct(price.pctVal)}｜累計 ${fmtPct(price.cumPct)}</div>`
+                : `<div>${market}缺少可配對收盤</div>`
+            ).join('');
+            const width = tooltipEl.offsetWidth;
+            const height = tooltipEl.offsetHeight;
+            const left = x + width + 24 < svg.clientWidth ? x + 12 : x - width - 12;
+            tooltipEl.style.left = `${Math.max(8, Math.min(left, svg.clientWidth - width - 8))}px`;
+            tooltipEl.style.top = `${Math.max(8, Math.min(y - height / 2, svg.clientHeight - height - 8))}px`;
+            tooltipEl.classList.add('visible');
+        }
+
+        function isVisible(row) {
+            return stageFilter === 'all' || row.stage === stageFilter;
+        }
+
+        function selectIndex(index, scrollToChart = false) {
+            const dataset = getCurrentDataset();
+            const row = dataset[index];
+            if (!row) return;
+            if (!isVisible(row)) {
+                stageFilter = 'all';
+                updatePressed('.stage-btn', 'stage', stageFilter);
+            }
+            selectedIdx = index;
+
+            const compare = activeMarket === 'compare';
+            document.getElementById('d-kicker').textContent = compare ? '美台觀測明細' : '當日行情';
+            document.getElementById('d-date').textContent = row.date;
+            const tag = document.getElementById('d-tag');
+            tag.hidden = !row.tag;
+            tag.textContent = row.tag ?? '';
+
+            document.getElementById('detail-boxes').innerHTML = marketObservations(row).map(([market, price]) => price
+                ? `<div class="m-box">
+                        <div class="m-box-title">${market} ${price.short} ${observationType(price)}</div>
+                        <div class="m-box-val tabular-nums">${fmtNum(price.value)} 點</div>
+                        <div class="m-box-sub">
+                            較前收 <span class="${changeClass(price.pctVal)}">${fmtPct(price.pctVal)}</span>
+                            ｜累計 <span class="${changeClass(price.cumPct)}">${fmtPct(price.cumPct)}</span>
+                        </div>
+                    </div>`
+                : `<div class="m-box"><div class="m-box-title">${market}</div><div>缺少可配對收盤</div></div>`
+            ).join('');
+
+            const detailNotes = [];
+            if (row.status === 'intraday') detailNotes.push('盤中觀測時間未提供。');
+            if (compare && row.sox) detailNotes.push(`台股 ${row.short} 配對費半美東 ${row.sox.short} 收盤。`);
+            const desc = document.getElementById('d-desc');
+            desc.textContent = detailNotes.join(' ');
+            desc.hidden = !detailNotes.length;
+
+            const eventText = marketObservations(row).map(([market, price]) => {
+                if (!price) return '';
+                const index = market === '費半' ? soxEventIndex : taiexEventIndex;
+                return index[price.isoDate] ? `${market} ${price.short}：${index[price.isoDate]}` : '';
+            }).filter(Boolean).join(' ');
+            const eventNote = document.getElementById('event-note');
+            eventNote.hidden = !eventText;
+            eventNote.open = false;
+            document.getElementById('event-text').textContent = eventText;
+
+            document.querySelectorAll('.pill-btn, .date-link').forEach(button => {
+                const selected = Number(button.dataset.idx) === index;
+                button.classList.toggle('active', selected);
+                if (selected) button.setAttribute('aria-current', 'date');
+                else button.removeAttribute('aria-current');
+                button.closest('tr')?.classList.toggle('selected-row', selected);
+            });
+
+            chartDate.replaceChildren(...dataset.flatMap((price, i) => isVisible(price)
+                ? [new Option(`${price.date} ${observationType(price)}`, i)]
+                : []));
+            chartDate.value = index;
+            renderChart();
+
+            if (scrollToChart) {
+                const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                chartDate.focus({ preventScroll: true });
+                document.getElementById('chart-section').scrollIntoView({
+                    behavior: reducedMotion ? 'instant' : 'smooth', block: 'start'
+                });
+            }
+        }
+
+        chartDate.addEventListener('change', () => selectIndex(Number(chartDate.value)));
+
+        function stepMilestone(direction) {
+            const milestones = getCurrentDataset().flatMap((row, index) => row.tag ? [index] : []);
+            const next = direction > 0
+                ? milestones.find(index => index > selectedIdx) ?? milestones[0]
+                : milestones.findLast(index => index < selectedIdx) ?? milestones.at(-1);
+            selectIndex(next);
+        }
+
+        function setStageFilter(stage) {
+            stageFilter = stage;
+            updatePressed('.stage-btn', 'stage', stage);
+            const dataset = getCurrentDataset();
+            const index = isVisible(dataset[selectedIdx]) ? selectedIdx : dataset.findIndex(isVisible);
+            selectIndex(index);
+        }
+
+        function toggleMa240() {
+            showMa240 = !showMa240;
+            const btn = document.getElementById('ma240-toggle-btn');
+            const status = document.getElementById('ma240-status');
+            btn.classList.toggle('checked', showMa240);
+            btn.setAttribute('aria-pressed', showMa240);
+            status.textContent = showMa240 ? '開啟' : '關閉';
+            renderChart();
+        }
+
         function toggleTheme() {
-            const htmlEl = document.documentElement;
-            const isDark = htmlEl.classList.toggle('dark');
-            htmlEl.classList.toggle('light', !isDark);
-
-            document.getElementById('icon-moon').classList.toggle('hidden', isDark);
-            document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
-            document.getElementById('theme-label').textContent = isDark ? '淺色模式' : '深色模式';
-
-            // 重繪圖表以適配文字與格線色彩
-            initChart();
+            const isLight = document.documentElement.classList.toggle('light');
+            document.getElementById('theme-icon').textContent = isLight ? '🌙' : '☀️';
+            document.getElementById('theme-text').textContent = isLight ? '切換深色模式' : '切換淺色模式';
+            renderChart();
         }
 
         function toggleScreenshotMode() {
-            const isScreenshot = document.body.classList.toggle('screenshot-mode');
-            const exitBar = document.getElementById('exit-screenshot-bar');
-            if (isScreenshot) {
-                exitBar.classList.remove('hidden');
-            } else {
-                exitBar.classList.add('hidden');
-            }
-            // 觸發圖表重新計算寬度
-            if (soxChartInstance) {
-                setTimeout(() => soxChartInstance.resize(), 50);
-            }
+            document.body.classList.toggle('screenshot-mode');
         }
 
-        // ==========================================
-        // 9. 頁面載入完成後啟動
-        // ==========================================
+        // =========================================================
+        // 7. 渲染快速膠囊與底部明細對照表
+        // =========================================================
+        function renderQuickPills() {
+            const pillsBox = document.getElementById('quick-pills');
+            pillsBox.innerHTML = '';
+            const dataset = getCurrentDataset();
+
+            dataset.forEach((d, idx) => {
+                if (!d.tag) return;
+                const btn = document.createElement('button');
+                btn.className = 'pill-btn';
+                btn.dataset.idx = idx;
+                btn.textContent = `${d.short} ${d.tag.split(' ')[0]}`;
+                btn.onclick = () => {
+                    selectIndex(idx);
+                };
+                pillsBox.appendChild(btn);
+            });
+        }
+
+        function renderTable() {
+            const compare = activeMarket === 'compare';
+            const dataset = getCurrentDataset();
+            document.getElementById('table-title').textContent = compare ? '美台配對明細'
+                : activeMarket === 'sox' ? '費半每日收盤' : '台股每日行情';
+            document.getElementById('table-head').innerHTML = compare
+                ? `<tr>
+                        <th scope="col">台灣日期</th>
+                        <th scope="col">台股點位</th>
+                        <th scope="col">台股累計</th>
+                        <th scope="col">費半收盤（美東日期）</th>
+                        <th scope="col">費半累計</th>
+                    </tr>`
+                : `<tr>
+                        <th scope="col">${activeMarket === 'sox' ? '美東日期' : '台灣日期'}</th>
+                        <th scope="col">點位</th>
+                        <th scope="col">較前收</th>
+                        <th scope="col">累計</th>
+                    </tr>`;
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = dataset.map((row, index) => `
+                <tr class="data-row">
+                    <th scope="row"><button type="button" class="date-link" data-idx="${index}">${row.date}</button></th>
+                    <td class="nowrap tabular-nums">${fmtNum(row.value)} <small>${observationType(row)}</small></td>
+                    ${compare
+                        ? `<td class="nowrap tabular-nums ${changeClass(row.cumPct)}">${fmtPct(row.cumPct)}</td>
+                            <td class="nowrap tabular-nums">${row.sox ? `${fmtNum(row.sox.value)} <small>(${row.sox.short})</small>` : '—'}</td>
+                            <td class="nowrap tabular-nums ${changeClass(row.sox?.cumPct)}">${fmtPct(row.sox?.cumPct)}</td>`
+                        : `<td class="nowrap tabular-nums ${changeClass(row.pctVal)}">${fmtPct(row.pctVal)}</td>
+                            <td class="nowrap tabular-nums ${changeClass(row.cumPct)}">${fmtPct(row.cumPct)}</td>`}
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('table-body').addEventListener('click', event => {
+            const button = event.target.closest('tr.data-row')?.querySelector('.date-link');
+            if (button) selectIndex(Number(button.dataset.idx), true);
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
-            renderMilestonePills();
-            renderDataTable();
-            initChart();
-            updateDetailPanel(selectedIndex);
-            highlightTableRow(selectedIndex);
+            switchMarket('sox');
+            let lastWidth = svg.clientWidth;
+            new ResizeObserver(() => {
+                const width = svg.clientWidth;
+                if (width === lastWidth) return;
+                lastWidth = width;
+                renderChart();
+            }).observe(svgContainer);
         });
     </script>
 </body>
