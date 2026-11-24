@@ -1002,7 +1002,7 @@
             font-size: 13px;
         }
 
-        #chart-date {
+        #chart-date, #news-category {
             min-height: 44px;
             padding: 6px 10px;
             color: var(--text-primary);
@@ -1012,6 +1012,36 @@
             font: inherit;
             align-self: flex-start;
             max-width: 100%;
+        }
+
+        .news-filter, .share-selection {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .news-filter {
+            margin-bottom: 12px;
+        }
+
+        .share-selection[hidden] {
+            display: none;
+        }
+
+        .share-selection {
+            margin-top: 12px;
+        }
+
+        #selection-url {
+            width: 100%;
+            min-width: 0;
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 6px;
         }
 
         .kpi-card {
@@ -1095,7 +1125,7 @@
                     <span id="theme-icon">☀️</span>
                     <span id="theme-text">切換淺色模式</span>
                 </button>
-                <button class="btn btn-primary" onclick="toggleScreenshotMode()">
+                <button class="btn btn-primary" id="enter-screenshot-btn" onclick="toggleScreenshotMode()">
                     📸 截圖展示模式
                 </button>
             </div>
@@ -1154,6 +1184,17 @@
                 </div>
             </div>
 
+            <div class="news-filter hide-in-screenshot">
+                <label for="news-category">新聞分類</label>
+                <select id="news-category">
+                    <option value="all">全部新聞</option>
+                    <option value="regulation">國安與監管</option>
+                    <option value="company">公司與財報</option>
+                    <option value="policy">台股政策</option>
+                </select>
+                <span id="news-filter-status" role="status"></span>
+            </div>
+
             <!-- 主視覺雙欄：左側 SVG 圖表 + 右側焦點詳情卡 -->
             <div class="chart-layout">
                 <!-- 左側圖表區 -->
@@ -1178,7 +1219,7 @@
                     <div>
                         <div class="detail-header">
                             <span class="detail-kicker" id="d-kicker">📌 🇺🇸 費半焦點交易日解析</span>
-                            <div class="nav-arrows hide-in-screenshot">
+                            <div class="nav-arrows hide-in-screenshot" role="group" aria-label="瀏覽重點日期，可使用左右方向鍵">
                                 <button class="nav-arrow-btn" onclick="stepMilestone(-1)">◀ 上一重點</button>
                                 <button class="nav-arrow-btn" onclick="stepMilestone(1)">下一重點 ▶</button>
                             </div>
@@ -1201,6 +1242,11 @@
                                 <ul id="event-list"></ul>
                                 <p id="source-status" class="detail-story-desc" role="status"></p>
                             </section>
+                            <div class="share-selection hide-in-screenshot" id="share-selection" hidden>
+                                <button type="button" class="nav-arrow-btn" id="share-view">複製此日期連結</button>
+                                <span id="share-status" role="status"></span>
+                                <input id="selection-url" type="url" readonly hidden aria-label="此日期的分享網址">
+                            </div>
                         </div>
                     </div>
 
@@ -1296,22 +1342,22 @@
         const newsByMarket = {
             '費半': {
                 '2026-10-29': {
-                    label: '紐時報導',
+                    label: '紐時報導', category: 'regulation',
                     detail: '《紐約時報》於美東 10/29 刊出相關報導，下方為台灣媒體隔日轉述。',
                     sources: [['經濟日報｜10/30 轉述紐時', 'https://money.udn.com/money/story/5599/9846145']]
                 },
                 '2026-11-04': {
-                    label: '國會要求說明', below: true,
+                    label: '國會要求說明', category: 'regulation', below: true,
                     detail: '美國眾議院委員會於 11/04 發函，要求黃仁勳出席閉門簡報。',
                     sources: [['美國眾議院｜11/04 原函 PDF', 'https://chinaselectcommittee.house.gov/sites/evo-subsites/selectcommitteeontheccp.house.gov/files/evo-media-document/nvidia-letter-pdf.pdf']]
                 },
                 '2026-11-09': {
-                    label: '致歉消息',
+                    label: '致歉消息', category: 'company',
                     detail: 'NVIDIA 於 11/08 公開黃仁勳致員工的致歉信，圖上對照下一個費半交易日 11/09。',
                     sources: [['NVIDIA｜11/08 致歉信', 'https://nvidianews.nvidia.com/news/a-message-to-our-company']]
                 },
                 '2026-11-12': {
-                    label: '請辭消息',
+                    label: '請辭消息', category: 'company',
                     detail: 'NVIDIA 於 11/12 公告黃仁勳請辭及執行長交接。SEC 申報記載董事會於 11/11 接受辭呈。',
                     sources: [
                         ['NVIDIA｜11/12 交接公告', 'https://nvidianews.nvidia.com/news/nvidia-announces-ceo-transition'],
@@ -1319,7 +1365,7 @@
                     ]
                 },
                 '2026-11-17': {
-                    label: '財報及回任討論', below: true,
+                    label: '財報及回任討論', category: 'company', below: true,
                     detail: 'NVIDIA 於 11/17 公布財報。路透報導，董事長在財報電話會議上表示當時無意聘回黃仁勳。',
                     sources: [
                         ['NVIDIA｜11/17 財報', 'https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2027'],
@@ -1327,7 +1373,7 @@
                     ]
                 },
                 '2026-11-23': {
-                    label: '回任消息', showChange: true,
+                    label: '回任消息', category: 'company', showChange: true,
                     detail: 'NVIDIA 於 11/23 公告回任。SEC 申報記載董事會於 11/22 恢復黃仁勳職務。',
                     sources: [
                         ['NVIDIA｜11/23 回任公告', 'https://nvidianews.nvidia.com/news/nvidia-board-reinstates-jensen-huang-as-president-ceo-and-board-director'],
@@ -1338,22 +1384,22 @@
             },
             '台股': {
                 '2026-10-30': {
-                    label: '台媒轉述',
+                    label: '台媒轉述', category: 'regulation',
                     detail: '公視於 10/30 轉述紐時報導，並報導輝達的回應。',
                     sources: [['公視｜10/30 報導', 'https://news.pts.org.tw/article/833591']]
                 },
                 '2026-11-09': {
-                    label: '國安基金與限空消息',
+                    label: '國安基金與限空消息', category: 'policy',
                     detail: '公視 11/09 報導國安基金獲授權進場及金管會限空措施。',
                     sources: [['公視｜11/09 報導', 'https://news.pts.org.tw/article/834992']]
                 },
                 '2026-11-13': {
-                    label: '請辭消息', below: true,
+                    label: '請辭消息', category: 'company', below: true,
                     detail: '經濟日報 11/13 台股盤前報導提及輝達執行長請辭。',
                     sources: [['經濟日報｜11/13 台股盤前', 'https://money.udn.com/money/story/5607/9875944']]
                 },
                 '2026-11-24': {
-                    label: '回任消息',
+                    label: '回任消息', category: 'company',
                     detail: '中央社 11/24 報導黃仁勳回任與台股早盤走勢。圖上點位為原稿的盤中觀測。',
                     sources: [['中央社｜11/24 台股早盤', 'https://www.cna.com.tw/news/afe/202611240034.aspx']]
                 }
@@ -1363,7 +1409,9 @@
         function getNews(row) {
             return marketObservations(row).flatMap(([market, price]) => {
                 const event = price && newsByMarket[market][price.isoDate];
-                return event ? [{ ...event, market, price }] : [];
+                return event && (newsCategory.value === 'all' || event.category === newsCategory.value)
+                    ? [{ ...event, market, price }]
+                    : [];
             });
         }
 
@@ -1422,7 +1470,32 @@
         const svgContainer = document.getElementById('svg-container');
         const tooltipEl = document.getElementById('svg-tooltip');
         const chartDate = document.getElementById('chart-date');
+        const newsCategory = document.getElementById('news-category');
+        const selectionUrl = document.getElementById('selection-url');
+        const shareStatus = document.getElementById('share-status');
         const kpiGrid = document.getElementById('kpi-grid');
+
+        async function copyUrl(url, address, status) {
+            try {
+                await navigator.clipboard.writeText(url);
+                status.textContent = '已複製網址。';
+            } catch {
+                address.value = url;
+                address.hidden = false;
+                address.focus();
+                address.select();
+                status.textContent = '網址已選取，可手動複製。';
+            }
+        }
+
+        document.getElementById('share-view').addEventListener('click', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('market', activeMarket);
+            url.searchParams.set('stage', stageFilter);
+            url.searchParams.set('category', newsCategory.value);
+            url.searchParams.set('date', getCurrentDataset()[selectedIdx].isoDate);
+            copyUrl(url.href, selectionUrl, shareStatus);
+        });
 
         function changeClass(value) {
             if (value == null || value === 0) return '';
@@ -1462,10 +1535,10 @@
             });
         }
 
-        function switchMarket(market) {
+        function switchMarket(market, stage = 'all', date = null) {
             activeMarket = market;
             updatePressed('.market-tab-btn', 'market', market);
-            stageFilter = 'all';
+            stageFilter = stage;
             updatePressed('.stage-btn', 'stage', stageFilter);
 
             const compare = market === 'compare';
@@ -1483,9 +1556,10 @@
 
             const dataset = getCurrentDataset();
             renderKPIs(dataset);
-            renderQuickPills();
             renderTable();
-            selectIndex(dataset.length - 1);
+            renderQuickPills();
+            const requested = dataset.findIndex(row => row.isoDate === date && isVisible(row));
+            selectIndex(requested < 0 ? dataset.findLastIndex(isVisible) : requested);
         }
 
         function kpiCard(row, label, tag, value, description, tone = 'neutral') {
@@ -2010,6 +2084,7 @@
             if (!isVisible(row)) {
                 stageFilter = 'all';
                 updatePressed('.stage-btn', 'stage', stageFilter);
+                renderQuickPills();
             }
             selectedIdx = index;
 
@@ -2041,6 +2116,8 @@
 
             const news = getNews(row);
             document.getElementById('event-note').hidden = !news.length;
+            selectionUrl.hidden = true;
+            shareStatus.textContent = '';
             const sourceStatus = document.getElementById('source-status');
             sourceStatus.textContent = '';
             document.getElementById('event-list').replaceChildren(...news.map(event => {
@@ -2070,17 +2147,7 @@
                     address.hidden = true;
                     address.value = url;
                     address.setAttribute('aria-label', `${name}的網址`);
-                    copy.addEventListener('click', async () => {
-                        try {
-                            await navigator.clipboard.writeText(url);
-                            sourceStatus.textContent = '已複製網址。';
-                        } catch {
-                            address.hidden = false;
-                            address.focus();
-                            address.select();
-                            sourceStatus.textContent = '網址已選取，可手動複製。';
-                        }
-                    });
+                    copy.addEventListener('click', () => copyUrl(url, address, sourceStatus));
                     entry.append(link, copy, address);
                     links.append(entry);
                 }
@@ -2112,9 +2179,13 @@
         }
 
         chartDate.addEventListener('change', () => selectIndex(Number(chartDate.value)));
+        newsCategory.addEventListener('change', () => {
+            renderQuickPills();
+            selectIndex(selectedIdx);
+        });
 
         function stepMilestone(direction) {
-            const milestones = getCurrentDataset().flatMap((row, index) => row.tag || getNews(row).length ? [index] : []);
+            const milestones = getCurrentDataset().flatMap((row, index) => isVisible(row) && isMilestone(row) ? [index] : []);
             const next = direction > 0
                 ? milestones.find(index => index > selectedIdx) ?? milestones[0]
                 : milestones.findLast(index => index < selectedIdx) ?? milestones.at(-1);
@@ -2124,6 +2195,7 @@
         function setStageFilter(stage) {
             stageFilter = stage;
             updatePressed('.stage-btn', 'stage', stage);
+            renderQuickPills();
             const dataset = getCurrentDataset();
             const index = isVisible(dataset[selectedIdx]) ? selectedIdx : dataset.findIndex(isVisible);
             selectIndex(index);
@@ -2147,20 +2219,45 @@
         }
 
         function toggleScreenshotMode() {
-            document.body.classList.toggle('screenshot-mode');
+            const enabled = document.body.classList.toggle('screenshot-mode');
+            document.getElementById(enabled ? 'exit-screenshot-btn' : 'enter-screenshot-btn').focus();
         }
+
+        document.querySelector('.nav-arrows').addEventListener('keydown', event => {
+            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            stepMilestone(event.key === 'ArrowLeft' ? -1 : 1);
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && document.body.classList.contains('screenshot-mode')) {
+                toggleScreenshotMode();
+            }
+        });
 
         // =========================================================
         // 7. 渲染快速膠囊與底部明細對照表
         // =========================================================
+        function isMilestone(row) {
+            return getNews(row).length > 0 || (newsCategory.value === 'all' && Boolean(row.tag));
+        }
+
         function renderQuickPills() {
             const pillsBox = document.getElementById('quick-pills');
             pillsBox.innerHTML = '';
             const dataset = getCurrentDataset();
+            const hasMatches = dataset.some(row => isVisible(row) && getNews(row).length);
+            document.getElementById('news-filter-status').textContent =
+                hasMatches || newsCategory.value === 'all' ? '' : '目前波段沒有這類新聞。';
+            const hasMilestones = dataset.some(row => isVisible(row) && isMilestone(row));
+            document.querySelectorAll('.nav-arrows button').forEach(button => {
+                button.disabled = !hasMilestones;
+            });
 
             dataset.forEach((d, idx) => {
+                if (!isVisible(d) || !isMilestone(d)) return;
                 const news = getNews(d);
-                if (!d.tag && !news.length) return;
                 const btn = document.createElement('button');
                 btn.className = 'pill-btn';
                 btn.dataset.idx = idx;
@@ -2213,7 +2310,20 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            switchMarket('sox');
+            const params = new URLSearchParams(window.location.search);
+            const market = params.get('market');
+            const stage = params.get('stage');
+            const category = params.get('category');
+            if (Array.from(newsCategory.options).some(option => option.value === category)) {
+                newsCategory.value = category;
+            }
+            const shareSelection = document.getElementById('share-selection');
+            shareSelection.hidden = !['https:', 'http:'].includes(window.location.protocol);
+            switchMarket(
+                ['sox', 'taiex', 'compare'].includes(market) ? market : 'sox',
+                ['s1', 's2', 's3'].includes(stage) ? stage : 'all',
+                params.get('date')
+            );
             let lastWidth = svg.clientWidth;
             new ResizeObserver(() => {
                 const width = svg.clientWidth;
