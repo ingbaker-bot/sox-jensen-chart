@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>費半 (SOX) × 台股 (TAIEX) 走勢對照</title>
+    <title>費半與台股走勢 × 新聞事件對照</title>
     <style>
         /* =========================================================
            1. CSS 變數與主題色票定義 (預設深色財經終端機風格)
@@ -901,6 +901,51 @@
             margin: 10px 0 0;
         }
 
+        :root {
+            --news-border: #d97706;
+            --news-background: #451e07;
+            --news-text: #fef3c7;
+        }
+
+        html.light {
+            --news-border: #b45309;
+            --news-background: #fffbeb;
+            --news-text: #78350f;
+        }
+
+        .news-key {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f59e0b;
+        }
+
+        .chart-callout {
+            cursor: pointer;
+        }
+
+        #event-note {
+            margin-top: 12px;
+            border-inline-start: 2px solid var(--news-border);
+            padding-inline-start: 12px;
+        }
+
+        #event-list {
+            margin: 6px 0 0;
+            padding: 0;
+            list-style: none;
+            font-size: 13px;
+        }
+
+        #event-list li + li {
+            margin-top: 8px;
+        }
+
+        #event-list p {
+            margin: 2px 0 0;
+            color: var(--text-secondary);
+        }
+
         .chart-box {
             min-width: 0;
         }
@@ -990,7 +1035,7 @@
                 <div class="badge-live">
                     SOX × TAIEX DUAL-MARKET TRACKER (2026/10/28 ～ 11/24)
                 </div>
-                <h1>費半與台股走勢對照</h1>
+                <h1>費半與台股走勢 × 新聞事件對照</h1>
                 <div class="header-sub">
                     <span>一鍵切換美國費半 (SOX)、台灣加權指數 (TAIEX) 與雙線連動對照</span>
                     <span>|</span>
@@ -1010,7 +1055,7 @@
         </header>
 
         <p class="data-note">
-            <strong>資料待核實。</strong> 行情與事件索引取自原稿，原稿未附來源。11/24 台股為盤中觀測，時間未提供。
+            <strong>資料待核實。</strong> 行情與新聞節點取自原稿，原稿未附可核對的來源與發稿時間。標籤依原稿日期對照當日行情，事件對漲跌的影響未經驗證。11/24 台股為盤中觀測，時間未提供。
         </p>
 
         <!-- 2. 頂部雙市場主切換分頁列 -->
@@ -1068,7 +1113,8 @@
                 <div class="chart-box">
                     <div class="legend-row">
                         <div class="legend-items" id="chart-legend"></div>
-                        <span style="font-size: 11px;">點選日期或圖表節點查看明細</span>
+                        <span class="legend-item"><span class="news-key"></span>新聞節點（待核實）</span>
+                        <span style="font-size: 11px;">點選圖上標籤或日期查看新聞與行情</span>
                     </div>
 
                     <div class="svg-wrapper" id="svg-container">
@@ -1102,16 +1148,16 @@
                         <!-- 事件敘述 -->
                         <div class="detail-story">
                             <p class="detail-story-desc" id="d-desc"></p>
-                            <details id="event-note" hidden>
-                                <summary>原稿事件索引（待核實）</summary>
-                                <p class="detail-story-desc" id="event-text"></p>
-                            </details>
+                            <section id="event-note" aria-labelledby="event-title" hidden>
+                                <h3 class="detail-story-title" id="event-title">新聞事件（待核實）</h3>
+                                <ul id="event-list"></ul>
+                            </section>
                         </div>
                     </div>
 
                     <!-- 快速點選重大轉折日膠囊 -->
                     <div class="quick-pills-wrap hide-in-screenshot">
-                        <div class="quick-pills-label" id="quick-pills-title">重點日期</div>
+                        <div class="quick-pills-label" id="quick-pills-title">新聞與行情重點</div>
                         <div class="quick-pills" id="quick-pills"></div>
                     </div>
                 </aside>
@@ -1198,15 +1244,29 @@
             timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit'
         });
         const ma240Reference = 39322;
-        const soxEventIndex = {
-            '2026-10-29': '原稿將此日標為媒體首次報導的日期。',
-            '2026-11-12': '原稿將此日標為輝達執行長請辭消息日。',
-            '2026-11-17': '原稿提到當日有輝達財報與執行長回任討論。',
-            '2026-11-23': '原稿將此日標為輝達執行長回任消息日。'
+        const newsByMarket = {
+            '費半': {
+                '2026-10-29': { label: '紐時首報', detail: '原稿把《紐約時報》首次報導相關爭議的日期列為 10/29。' },
+                '2026-11-04': { label: '國會傳喚消息', detail: '原稿記載美國眾議院委員會發函要求輝達執行長黃仁勳出席。', below: true },
+                '2026-11-09': { label: '致歉消息', detail: '原稿將 11/8 的內部致歉消息列在下一個費半交易日 11/9。' },
+                '2026-11-12': { label: '請辭消息', detail: '原稿記載黃仁勳請辭及輝達暫代執行長的消息。' },
+                '2026-11-17': { label: '財報及回任討論', detail: '原稿將輝達財報和董事會回任討論列於此日。', below: true },
+                '2026-11-23': { label: '回任消息', showChange: true, detail: '原稿把輝達執行長黃仁勳回任消息列於此日。' }
+            },
+            '台股': {
+                '2026-10-30': { label: '台媒轉述', detail: '原稿記載台灣媒體於此日轉述美方報導。' },
+                '2026-11-09': { label: '國安基金與限空消息', detail: '原稿記載當日有國安基金進場與限空措施的消息。' },
+                '2026-11-13': { label: '請辭消息', detail: '原稿在這個台股交易日記載美方的請辭消息。', below: true },
+                '2026-11-24': { label: '回任消息', detail: '原稿在這個台股交易日記載美方的回任消息，圖上台股點位為盤中觀測。' }
+            }
         };
-        const taiexEventIndex = {
-            '2026-11-09': '原稿提到當日有國安基金進場與限空措施的消息。'
-        };
+
+        function getNews(row) {
+            return marketObservations(row).flatMap(([market, price]) => {
+                const event = price && newsByMarket[market][price.isoDate];
+                return event ? [{ ...event, market, price }] : [];
+            });
+        }
 
         function changePct(value, base) {
             return (value / base - 1) * 100;
@@ -1406,6 +1466,7 @@
             svg.style.aspectRatio = `${W} / ${H}`;
             const plotW = W - pad.left - pad.right;
             const plotH = H - pad.top - pad.bottom;
+            const callouts = [];
 
             const isDark = !document.documentElement.classList.contains('light');
             const colorGrid = isDark ? 'rgba(148, 163, 184, 0.13)' : 'rgba(100, 116, 139, 0.16)';
@@ -1558,14 +1619,18 @@
                         svg.appendChild(xTxt);
                     }
 
-                    if (isMilestone && !compact && isSelected) {
-                        drawCalloutBubble(svg, p.x, p.y, d.tag, d.pos || 'top', isSelected, isDark, pad, W, H);
+                    const news = getNews(d);
+                    if (news.length) {
+                        callouts.push({ point: p, y: p.y, events: news });
+                    } else if (activeMarket === 'sox' && ['2026-11-05', '2026-11-20'].includes(d.isoDate)) {
+                        const label = d.isoDate === '2026-11-05' ? fmtPct(d.pctVal) : `低點 ${fmtNum(d.value)}`;
+                        callouts.push({ point: p, y: p.y, label });
                     }
 
                     // 節點圓點（依台股紅漲綠跌配色）
-                    const r = isSelected ? 7.5 : (isMilestone ? 5.5 : 3.8);
-                    const dotFill = isSelected
-                        ? '#ffffff'
+                    const r = isSelected ? 7.5 : (news.length || isMilestone ? 5.5 : 3.8);
+                    const dotFill = news.length ? '#f59e0b'
+                        : isSelected ? '#ffffff'
                         : (d.pctVal ? (d.pctVal > 0 ? '#ef4444' : '#10b981') : mainColor);
 
                     drawPoint(p, p.y, r, dotFill, isSelected ? mainColor : (isDark ? '#0f172a' : '#ffffff'),
@@ -1651,7 +1716,6 @@
                 pts.forEach((p, visPos) => {
                     const d = p.data;
                     const isSelected = p.dataIdx === selectedIdx;
-                    const isMilestone = Boolean(d.tag);
 
                     const labelStride = Math.ceil(count / (compact ? 4 : Math.floor(plotW / 48)));
                     const showXLabel = visPos === 0 || visPos === count - 1 ||
@@ -1668,8 +1732,12 @@
                         svg.appendChild(xTxt);
                     }
 
-                    if (isMilestone && !compact && isSelected) {
-                        drawCalloutBubble(svg, p.x, p.yTaiex, d.tag, d.pos || 'top', isSelected, isDark, pad, W, H);
+                    const news = getNews(d);
+                    for (const event of news) {
+                        const isSoxEvent = event.market === '費半';
+                        const previous = compareData[p.dataIdx - 1];
+                        if (isSoxEvent && previous?.sox === d.sox && isVisible(previous)) continue;
+                        callouts.push({ point: p, y: isSoxEvent ? p.ySox : p.yTaiex, events: [event] });
                     }
 
                     // SOX 點
@@ -1697,6 +1765,8 @@
                     svg.appendChild(hitZone);
                 });
             }
+
+            drawCallouts(callouts, compact, W, H, pad);
         }
 
         function drawIntradaySegment(points, yKey, color) {
@@ -1720,47 +1790,70 @@
             svg.appendChild(marker);
         }
 
-        function drawCalloutBubble(svg, px, py, text, pos, isSelected, isDark, pad, W, H) {
-            const charW = 10.2;
-            const estWidth = Math.max(86, text.length * charW + 14);
-            const boxH = 22;
+        function drawCallouts(callouts, compact, width, height, pad) {
+            const occupied = [];
+            for (const { point, y, events, label } of callouts) {
+                const selected = point.dataIdx === selectedIdx;
+                const event = events?.[0];
+                const color = event ? 'var(--news-border)' : 'var(--tw-down)';
+                const group = createSvgEl('g', { class: `chart-callout ${event ? 'news-callout' : 'market-callout'}` });
+                if (!compact) group.addEventListener('mouseenter', () => handlePointHover(point.dataIdx, point.x, y));
+                group.addEventListener('click', () => {
+                    selectIndex(point.dataIdx);
+                    if (compact) document.getElementById('d-date').scrollIntoView({ block: 'nearest' });
+                });
+                const hitRadius = compact ? 10 : 8;
+                group.appendChild(createSvgEl('circle', {
+                    cx: point.x, cy: y, r: hitRadius, fill: 'transparent'
+                }));
+                if (event && event.price.status !== 'intraday') {
+                    group.appendChild(createSvgEl('circle', {
+                        cx: point.x, cy: y, r: 5, fill: '#f59e0b',
+                        stroke: selected ? 'var(--text-primary)' : 'var(--bg-card-elevated)',
+                        'stroke-width': selected ? 2.5 : 1.5
+                    }));
+                }
+                svg.appendChild(group);
+                if (compact && !selected) continue;
 
-            let bx = px - estWidth / 2;
-            if (bx < pad.left + 2) bx = pad.left + 2;
-            if (bx + estWidth > W - pad.right - 2) bx = W - pad.right - estWidth - 2;
-
-            let by = pos === 'top' ? py - boxH - 12 : py + 12;
-            if (by < 6) by = py + 12;
-            if (by + boxH > H - pad.bottom - 4) by = py - boxH - 12;
-
-            svg.appendChild(createSvgEl('line', {
-                x1: px, y1: py,
-                x2: px, y2: pos === 'top' ? by + boxH : by,
-                stroke: isSelected ? '#38bdf8' : (isDark ? 'rgba(251, 191, 36, 0.55)' : 'rgba(217, 119, 6, 0.5)'),
-                'stroke-width': 1.2
-            }));
-
-            svg.appendChild(createSvgEl('rect', {
-                x: bx, y: by, width: estWidth, height: boxH, rx: 6,
-                fill: isSelected
-                    ? '#2563eb'
-                    : (isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)'),
-                stroke: isSelected
-                    ? '#60a5fa'
-                    : (isDark ? 'rgba(251, 191, 36, 0.5)' : 'rgba(217, 119, 6, 0.55)'),
-                'stroke-width': 1.2
-            }));
-
-            const lbl = createSvgEl('text', {
-                x: bx + estWidth / 2,
-                y: by + 14.5,
-                fill: isSelected ? '#ffffff' : (isDark ? '#fde68a' : '#92400e'),
-                'font-size': '10.5',
-                'font-weight': '800',
-                'text-anchor': 'middle'
-            });
-            lbl.textContent = text;
-            svg.appendChild(lbl);
+                const date = event?.price.short ?? point.data.short;
+                const market = event && activeMarket === 'compare' ? `${event.market} ` : '';
+                const change = event?.showChange && activeMarket === 'sox' ? ` ${fmtPct(event.price.pctVal)}` : '';
+                const text = `${market}${date} ${event?.label ?? label}${change}`;
+                const textNode = createSvgEl('text', {
+                    'text-anchor': 'middle', 'font-size': 11, 'font-weight': 750,
+                    fill: event ? 'var(--news-text)' : 'var(--text-primary)'
+                });
+                textNode.textContent = text;
+                group.appendChild(textNode);
+                const boxWidth = Math.ceil(textNode.getComputedTextLength()) + 14;
+                const boxHeight = 22;
+                const x = Math.max(pad.left + 2, Math.min(point.x - boxWidth / 2, width - pad.right - boxWidth));
+                const above = y - boxHeight - 12;
+                const below = y + 12;
+                const preferred = event && !event.below ? [above, below] : [below, above];
+                const candidates = [...preferred, above - 26, below + 26, above - 52, below + 52];
+                const top = candidates.find(candidate => candidate >= 3 &&
+                    candidate + boxHeight < height - pad.bottom + 2 &&
+                    !occupied.some(box => x < box.right + 4 && x + boxWidth + 4 > box.left &&
+                        candidate < box.bottom + 3 && candidate + boxHeight + 3 > box.top));
+                if (top === undefined) {
+                    textNode.remove();
+                    continue;
+                }
+                occupied.push({ left: x, right: x + boxWidth, top, bottom: top + boxHeight });
+                group.insertBefore(createSvgEl('line', {
+                    x1: point.x, y1: y, x2: Math.min(x + boxWidth - 5, Math.max(x + 5, point.x)),
+                    y2: top < y ? top + boxHeight : top, stroke: color, 'pointer-events': 'none'
+                }), group.firstChild);
+                group.insertBefore(createSvgEl('rect', {
+                    x, y: top, width: boxWidth, height: boxHeight, rx: 5,
+                    fill: event ? 'var(--news-background)' : 'var(--bg-card)',
+                    stroke: color, 'stroke-width': selected ? 2 : 1
+                }), textNode);
+                textNode.setAttribute('x', x + boxWidth / 2);
+                textNode.setAttribute('y', top + 15);
+            }
         }
 
         // =========================================================
@@ -1783,6 +1876,8 @@
                 ? `<div><strong>${market} ${price.short} ${observationType(price)}</strong>
                     ${fmtNum(price.value)} 點<br>較前收 ${fmtPct(price.pctVal)}｜累計 ${fmtPct(price.cumPct)}</div>`
                 : `<div>${market}缺少可配對收盤</div>`
+            ).join('') + getNews(row).map(event =>
+                `<div><strong>${event.market} ${event.price.short}｜${event.label}</strong>（待核實）</div>`
             ).join('');
             const width = tooltipEl.offsetWidth;
             const height = tooltipEl.offsetHeight;
@@ -1832,15 +1927,17 @@
             desc.textContent = detailNotes.join(' ');
             desc.hidden = !detailNotes.length;
 
-            const eventText = marketObservations(row).map(([market, price]) => {
-                if (!price) return '';
-                const index = market === '費半' ? soxEventIndex : taiexEventIndex;
-                return index[price.isoDate] ? `${market} ${price.short}：${index[price.isoDate]}` : '';
-            }).filter(Boolean).join(' ');
-            const eventNote = document.getElementById('event-note');
-            eventNote.hidden = !eventText;
-            eventNote.open = false;
-            document.getElementById('event-text').textContent = eventText;
+            const news = getNews(row);
+            document.getElementById('event-note').hidden = !news.length;
+            document.getElementById('event-list').replaceChildren(...news.map(event => {
+                const item = document.createElement('li');
+                const title = document.createElement('strong');
+                title.textContent = `${event.market} ${event.price.short}｜${event.label}`;
+                const description = document.createElement('p');
+                description.textContent = event.detail;
+                item.append(title, description);
+                return item;
+            }));
 
             document.querySelectorAll('.pill-btn, .date-link').forEach(button => {
                 const selected = Number(button.dataset.idx) === index;
@@ -1868,7 +1965,7 @@
         chartDate.addEventListener('change', () => selectIndex(Number(chartDate.value)));
 
         function stepMilestone(direction) {
-            const milestones = getCurrentDataset().flatMap((row, index) => row.tag ? [index] : []);
+            const milestones = getCurrentDataset().flatMap((row, index) => row.tag || getNews(row).length ? [index] : []);
             const next = direction > 0
                 ? milestones.find(index => index > selectedIdx) ?? milestones[0]
                 : milestones.findLast(index => index < selectedIdx) ?? milestones.at(-1);
@@ -1913,11 +2010,12 @@
             const dataset = getCurrentDataset();
 
             dataset.forEach((d, idx) => {
-                if (!d.tag) return;
+                const news = getNews(d);
+                if (!d.tag && !news.length) return;
                 const btn = document.createElement('button');
                 btn.className = 'pill-btn';
                 btn.dataset.idx = idx;
-                btn.textContent = `${d.short} ${d.tag.split(' ')[0]}`;
+                btn.textContent = `${d.short} ${news.map(event => event.label).join('／') || d.tag}`;
                 btn.onclick = () => {
                     selectIndex(idx);
                 };
