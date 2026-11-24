@@ -1,0 +1,18 @@
+name: 5天後自動關閉網頁
+on:
+  schedule:
+    # UTC 時間 06:30 = 台灣時間 14:30，設定於 11月29日執行
+    - cron: '30 6 29 11 *'
+
+permissions:
+  pages: write
+
+jobs:
+  unpublish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unpublish GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X DELETE /repos/${{ github.repository }}/pages
