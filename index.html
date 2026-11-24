@@ -924,6 +924,11 @@
             cursor: pointer;
         }
 
+        .chart-callout a:focus-visible rect {
+            stroke: var(--text-primary);
+            stroke-width: 3;
+        }
+
         #event-note {
             margin-top: 12px;
             border-inline-start: 2px solid var(--news-border);
@@ -944,6 +949,48 @@
         #event-list p {
             margin: 2px 0 0;
             color: var(--text-secondary);
+        }
+
+        .event-sources {
+            display: grid;
+            gap: 4px;
+            margin-top: 5px;
+        }
+
+        .event-source {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 10px;
+        }
+
+        .event-sources a {
+            color: var(--color-sox);
+            padding-block: 4px;
+            text-underline-offset: 3px;
+        }
+
+        .event-sources a:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+
+        .event-source button, .event-source input {
+            padding: 4px 8px;
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font: inherit;
+        }
+
+        .event-source button {
+            cursor: pointer;
+        }
+
+        .event-source input {
+            width: 100%;
+            min-width: 0;
         }
 
         .chart-box {
@@ -1055,7 +1102,7 @@
         </header>
 
         <p class="data-note">
-            <strong>資料待核實。</strong> 行情與新聞節點取自原稿，原稿未附可核對的來源與發稿時間。標籤依原稿日期對照當日行情，事件對漲跌的影響未經驗證。11/24 台股為盤中觀測，時間未提供。
+            <strong>行情沿用原稿，部分點位與外部報導有差異。</strong> 點選新聞節點可查閱報導與公告。圖上日期為行情對照日，可能與發布日不同。11/24 台股為盤中觀測，時間未提供。
         </p>
 
         <!-- 2. 頂部雙市場主切換分頁列 -->
@@ -1113,12 +1160,12 @@
                 <div class="chart-box">
                     <div class="legend-row">
                         <div class="legend-items" id="chart-legend"></div>
-                        <span class="legend-item"><span class="news-key"></span>新聞節點（待核實）</span>
-                        <span style="font-size: 11px;">點選圖上標籤或日期查看新聞與行情</span>
+                        <span class="legend-item"><span class="news-key"></span>新聞節點</span>
+                        <span style="font-size: 11px;">點橘色標籤開啟來源 ↗，點圓點查看明細</span>
                     </div>
 
                     <div class="svg-wrapper" id="svg-container">
-                        <svg id="main-svg" viewBox="0 0 860 440" role="img" aria-label="市場走勢圖，明細可從下方日期選擇"></svg>
+                        <svg id="main-svg" viewBox="0 0 860 440" role="group" aria-label="市場走勢與新聞來源，明細可從下方日期選擇"></svg>
                         <div id="svg-tooltip" aria-hidden="true"></div>
                     </div>
                     <label class="chart-date-label" for="chart-date">查看日期</label>
@@ -1149,8 +1196,10 @@
                         <div class="detail-story">
                             <p class="detail-story-desc" id="d-desc"></p>
                             <section id="event-note" aria-labelledby="event-title" hidden>
-                                <h3 class="detail-story-title" id="event-title">新聞事件（待核實）</h3>
+                                <h3 class="detail-story-title" id="event-title">新聞與來源</h3>
+                                <p class="detail-story-desc">如預覽未開啟新分頁，可複製網址到瀏覽器。</p>
                                 <ul id="event-list"></ul>
+                                <p id="source-status" class="detail-story-desc" role="status"></p>
                             </section>
                         </div>
                     </div>
@@ -1246,18 +1295,68 @@
         const ma240Reference = 39322;
         const newsByMarket = {
             '費半': {
-                '2026-10-29': { label: '紐時首報', detail: '原稿把《紐約時報》首次報導相關爭議的日期列為 10/29。' },
-                '2026-11-04': { label: '國會傳喚消息', detail: '原稿記載美國眾議院委員會發函要求輝達執行長黃仁勳出席。', below: true },
-                '2026-11-09': { label: '致歉消息', detail: '原稿將 11/8 的內部致歉消息列在下一個費半交易日 11/9。' },
-                '2026-11-12': { label: '請辭消息', detail: '原稿記載黃仁勳請辭及輝達暫代執行長的消息。' },
-                '2026-11-17': { label: '財報及回任討論', detail: '原稿將輝達財報和董事會回任討論列於此日。', below: true },
-                '2026-11-23': { label: '回任消息', showChange: true, detail: '原稿把輝達執行長黃仁勳回任消息列於此日。' }
+                '2026-10-29': {
+                    label: '紐時報導',
+                    detail: '《紐約時報》於美東 10/29 刊出相關報導，下方為台灣媒體隔日轉述。',
+                    sources: [['經濟日報｜10/30 轉述紐時', 'https://money.udn.com/money/story/5599/9846145']]
+                },
+                '2026-11-04': {
+                    label: '國會要求說明', below: true,
+                    detail: '美國眾議院委員會於 11/04 發函，要求黃仁勳出席閉門簡報。',
+                    sources: [['美國眾議院｜11/04 原函 PDF', 'https://chinaselectcommittee.house.gov/sites/evo-subsites/selectcommitteeontheccp.house.gov/files/evo-media-document/nvidia-letter-pdf.pdf']]
+                },
+                '2026-11-09': {
+                    label: '致歉消息',
+                    detail: 'NVIDIA 於 11/08 公開黃仁勳致員工的致歉信，圖上對照下一個費半交易日 11/09。',
+                    sources: [['NVIDIA｜11/08 致歉信', 'https://nvidianews.nvidia.com/news/a-message-to-our-company']]
+                },
+                '2026-11-12': {
+                    label: '請辭消息',
+                    detail: 'NVIDIA 於 11/12 公告黃仁勳請辭及執行長交接。SEC 申報記載董事會於 11/11 接受辭呈。',
+                    sources: [
+                        ['NVIDIA｜11/12 交接公告', 'https://nvidianews.nvidia.com/news/nvidia-announces-ceo-transition'],
+                        ['SEC｜董事會紀錄 8-K', 'https://www.sec.gov/Archives/edgar/data/1045810/000104581026000082/nvda-20261111.htm']
+                    ]
+                },
+                '2026-11-17': {
+                    label: '財報及回任討論', below: true,
+                    detail: 'NVIDIA 於 11/17 公布財報。路透報導，董事長在財報電話會議上表示當時無意聘回黃仁勳。',
+                    sources: [
+                        ['NVIDIA｜11/17 財報', 'https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2027'],
+                        ['路透｜11/17 回任討論', 'https://www.reuters.com/business/nvidia-forecasts-quarterly-revenue-above-estimates-first-report-since-huangs-2026-11-17/']
+                    ]
+                },
+                '2026-11-23': {
+                    label: '回任消息', showChange: true,
+                    detail: 'NVIDIA 於 11/23 公告回任。SEC 申報記載董事會於 11/22 恢復黃仁勳職務。',
+                    sources: [
+                        ['NVIDIA｜11/23 回任公告', 'https://nvidianews.nvidia.com/news/nvidia-board-reinstates-jensen-huang-as-president-ceo-and-board-director'],
+                        ['SEC｜董事會紀錄 8-K', 'https://www.sec.gov/Archives/edgar/data/1045810/000104581026000090/nvda-20261122.htm'],
+                        ['中央社｜費半收盤報導', 'https://www.cna.com.tw/news/afe/202611240012.aspx']
+                    ]
+                }
             },
             '台股': {
-                '2026-10-30': { label: '台媒轉述', detail: '原稿記載台灣媒體於此日轉述美方報導。' },
-                '2026-11-09': { label: '國安基金與限空消息', detail: '原稿記載當日有國安基金進場與限空措施的消息。' },
-                '2026-11-13': { label: '請辭消息', detail: '原稿在這個台股交易日記載美方的請辭消息。', below: true },
-                '2026-11-24': { label: '回任消息', detail: '原稿在這個台股交易日記載美方的回任消息，圖上台股點位為盤中觀測。' }
+                '2026-10-30': {
+                    label: '台媒轉述',
+                    detail: '公視於 10/30 轉述紐時報導，並報導輝達的回應。',
+                    sources: [['公視｜10/30 報導', 'https://news.pts.org.tw/article/833591']]
+                },
+                '2026-11-09': {
+                    label: '國安基金與限空消息',
+                    detail: '公視 11/09 報導國安基金獲授權進場及金管會限空措施。',
+                    sources: [['公視｜11/09 報導', 'https://news.pts.org.tw/article/834992']]
+                },
+                '2026-11-13': {
+                    label: '請辭消息', below: true,
+                    detail: '經濟日報 11/13 台股盤前報導提及輝達執行長請辭。',
+                    sources: [['經濟日報｜11/13 台股盤前', 'https://money.udn.com/money/story/5607/9875944']]
+                },
+                '2026-11-24': {
+                    label: '回任消息',
+                    detail: '中央社 11/24 報導黃仁勳回任與台股早盤走勢。圖上點位為原稿的盤中觀測。',
+                    sources: [['中央社｜11/24 台股早盤', 'https://www.cna.com.tw/news/afe/202611240034.aspx']]
+                }
             }
         };
 
@@ -1795,6 +1894,7 @@
             for (const { point, y, events, label } of callouts) {
                 const selected = point.dataIdx === selectedIdx;
                 const event = events?.[0];
+                const source = event?.sources[0];
                 const color = event ? 'var(--news-border)' : 'var(--tw-down)';
                 const group = createSvgEl('g', { class: `chart-callout ${event ? 'news-callout' : 'market-callout'}` });
                 if (!compact) group.addEventListener('mouseenter', () => handlePointHover(point.dataIdx, point.x, y));
@@ -1819,7 +1919,7 @@
                 const date = event?.price.short ?? point.data.short;
                 const market = event && activeMarket === 'compare' ? `${event.market} ` : '';
                 const change = event?.showChange && activeMarket === 'sox' ? ` ${fmtPct(event.price.pctVal)}` : '';
-                const text = `${market}${date} ${event?.label ?? label}${change}`;
+                const text = `${market}${date} ${event?.label ?? label}${change}${source ? ' ↗' : ''}`;
                 const textNode = createSvgEl('text', {
                     'text-anchor': 'middle', 'font-size': 11, 'font-weight': 750,
                     fill: event ? 'var(--news-text)' : 'var(--text-primary)'
@@ -1846,13 +1946,25 @@
                     x1: point.x, y1: y, x2: Math.min(x + boxWidth - 5, Math.max(x + 5, point.x)),
                     y2: top < y ? top + boxHeight : top, stroke: color, 'pointer-events': 'none'
                 }), group.firstChild);
-                group.insertBefore(createSvgEl('rect', {
+                const background = createSvgEl('rect', {
                     x, y: top, width: boxWidth, height: boxHeight, rx: 5,
                     fill: event ? 'var(--news-background)' : 'var(--bg-card)',
                     stroke: color, 'stroke-width': selected ? 2 : 1
-                }), textNode);
+                });
                 textNode.setAttribute('x', x + boxWidth / 2);
                 textNode.setAttribute('y', top + 15);
+                if (source) {
+                    const [name, url] = source;
+                    const link = createSvgEl('a', {
+                        href: url, target: '_blank', rel: 'noopener noreferrer', tabindex: 0,
+                        'aria-label': `${date} ${event.label}，${name}（在新分頁開啟）`
+                    });
+                    link.addEventListener('click', click => click.stopPropagation());
+                    group.appendChild(link);
+                    link.append(background, textNode);
+                } else {
+                    group.insertBefore(background, textNode);
+                }
             }
         }
 
@@ -1877,7 +1989,7 @@
                     ${fmtNum(price.value)} 點<br>較前收 ${fmtPct(price.pctVal)}｜累計 ${fmtPct(price.cumPct)}</div>`
                 : `<div>${market}缺少可配對收盤</div>`
             ).join('') + getNews(row).map(event =>
-                `<div><strong>${event.market} ${event.price.short}｜${event.label}</strong>（待核實）</div>`
+                `<div><strong>${event.market} ${event.price.short}｜${event.label}</strong></div>`
             ).join('');
             const width = tooltipEl.offsetWidth;
             const height = tooltipEl.offsetHeight;
@@ -1929,6 +2041,8 @@
 
             const news = getNews(row);
             document.getElementById('event-note').hidden = !news.length;
+            const sourceStatus = document.getElementById('source-status');
+            sourceStatus.textContent = '';
             document.getElementById('event-list').replaceChildren(...news.map(event => {
                 const item = document.createElement('li');
                 const title = document.createElement('strong');
@@ -1936,6 +2050,41 @@
                 const description = document.createElement('p');
                 description.textContent = event.detail;
                 item.append(title, description);
+                const links = document.createElement('div');
+                links.className = 'event-sources';
+                for (const [name, url] of event.sources) {
+                    const entry = document.createElement('div');
+                    entry.className = 'event-source';
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = `${name} ↗`;
+                    link.setAttribute('aria-label', `${name}（在新分頁開啟）`);
+                    const copy = document.createElement('button');
+                    copy.type = 'button';
+                    copy.textContent = '複製網址';
+                    copy.setAttribute('aria-label', `複製網址：${name}`);
+                    const address = document.createElement('input');
+                    address.readOnly = true;
+                    address.hidden = true;
+                    address.value = url;
+                    address.setAttribute('aria-label', `${name}的網址`);
+                    copy.addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(url);
+                            sourceStatus.textContent = '已複製網址。';
+                        } catch {
+                            address.hidden = false;
+                            address.focus();
+                            address.select();
+                            sourceStatus.textContent = '網址已選取，可手動複製。';
+                        }
+                    });
+                    entry.append(link, copy, address);
+                    links.append(entry);
+                }
+                item.append(links);
                 return item;
             }));
 
